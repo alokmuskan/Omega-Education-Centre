@@ -4,11 +4,13 @@ import 'package:omega_education_centre/shared/config/backend_config.dart';
 import 'package:omega_education_centre/shared/services/sync_engine.dart';
 import 'package:omega_education_centre/shared/services/sync_queue_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:omega_education_centre/shared/utils/encryption_key_manager.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
+  EncryptionKeyManager.testMode = true;
 
   group('Phase 32 — Controlled Offline-First Sync Engine Unit Tests', () {
     late SyncQueueRepository queueRepo;

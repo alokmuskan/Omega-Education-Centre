@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:omega_education_centre/shared/utils/encryption_key_manager.dart';
 import 'package:omega_education_centre/core/database/database_helper.dart';
 import 'package:omega_education_centre/features/authentication/repository/auth_repository.dart';
 import 'package:omega_education_centre/features/students/models/student_model.dart';
@@ -14,6 +15,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
+  EncryptionKeyManager.testMode = true;
 
   late StudentRepository studentRepo;
   late TeacherRepository teacherRepo;

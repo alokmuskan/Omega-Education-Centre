@@ -3,12 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:omega_education_centre/features/dashboard/dashboard_screen.dart';
 import 'package:omega_education_centre/shared/utils/app_session.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:omega_education_centre/shared/utils/encryption_key_manager.dart';
 import 'package:omega_education_centre/core/database/database_helper.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
+  EncryptionKeyManager.testMode = true;
 
   setUp(() async {
     AppSession.instance.clearSession();

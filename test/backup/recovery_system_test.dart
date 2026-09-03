@@ -5,11 +5,13 @@ import 'package:omega_education_centre/features/backup/services/org_identity_ser
 import 'package:omega_education_centre/features/teachers/models/teacher_model.dart';
 import 'package:omega_education_centre/shared/utils/app_session.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:omega_education_centre/shared/utils/encryption_key_manager.dart';
 
 void main() {
   setUpAll(() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+  EncryptionKeyManager.testMode = true;
   });
 
   group('Phase 21 — Secure ERP Recovery & Organisation Identity Unit Tests', () {
