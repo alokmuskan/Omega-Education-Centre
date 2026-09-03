@@ -6,6 +6,8 @@ import '../../../core/database/database_helper.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../shared/services/supabase_auth_service.dart';
 import '../../../shared/utils/app_session.dart';
+import '../../../shared/utils/login_attempt_tracker.dart';
+import '../../../shared/utils/password_strength_validator.dart';
 import '../../../shared/utils/password_util.dart';
 
 import '../../dashboard/dashboard_screen.dart';
@@ -88,6 +90,7 @@ class AuthRepository {
   ) async {
     final cleanUser = username.trim();
     final cleanPass = password.trim();
+    final tracker = LoginAttemptTracker.instance;
 
     // -------------------------------------------------------------------------
     // Basic validation
@@ -98,6 +101,21 @@ class AuthRepository {
         success: false,
         role: '',
         message: 'Username and password are required.',
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // BRUTE-FORCE PROTECTION
+    // Check if this account is temporarily locked out
+    // -------------------------------------------------------------------------
+
+    final lockoutMinutes = tracker.getMinutesUntilUnlock(cleanUser);
+    if (lockoutMinutes > 0) {
+      return AuthResult(
+        success: false,
+        role: '',
+        message: 'Account temporarily locked due to too many failed attempts. '
+            'Try again in $lockoutMinutes minute${lockoutMinutes == 1 ? '' : 's'}.',
       );
     }
 
@@ -132,10 +150,22 @@ class AuthRepository {
           print('[AUTH-TRACE-ADMIN-04] Supabase authentication = FAILED');
         }
 
-        return const AuthResult(
+        tracker.recordFailedAttempt(cleanUser);
+        final remaining = tracker.getRemainingAttempts(cleanUser);
+        final lockout = tracker.getMinutesUntilUnlock(cleanUser);
+
+        if (lockout > 0) {
+          return AuthResult(
+            success: false,
+            role: '',
+            message: 'Invalid Admin password. Account locked for $lockout minute${lockout == 1 ? '' : 's'} due to too many failed attempts.',
+          );
+        }
+
+        return AuthResult(
           success: false,
           role: '',
-          message: 'Invalid Admin password.',
+          message: 'Invalid password. $remaining attempt${remaining == 1 ? '' : 's'} remaining before lockout.',
         );
       }
 
@@ -183,6 +213,12 @@ class AuthRepository {
       }
 
       // -----------------------------------------------------------------------
+      // Admin authenticated successfully - clear failed attempts
+      // -----------------------------------------------------------------------
+
+      tracker.clearAttempts(cleanUser);
+
+      // -----------------------------------------------------------------------
       // Establish application Admin session
       // -----------------------------------------------------------------------
 
@@ -203,18 +239,14 @@ class AuthRepository {
     }
 
     // -------------------------------------------------------------------------
-    // WEB
+    // TEACHER / STUDENT AUTHENTICATION
     //
-    // Teacher/Student authentication currently depends on SQLite.
-    // SQLite is not available through the current database layer on Web.
+    // On native platforms: authenticate via local SQLite
+    // On web: authenticate via Supabase Auth (auto-provisions if needed)
     // -------------------------------------------------------------------------
 
     if (kIsWeb) {
-      return const AuthResult(
-        success: false,
-        role: '',
-        message: 'Only the Admin account can sign in on Web.',
-      );
+      return _webAuthenticate(cleanUser, cleanPass);
     }
 
     // -------------------------------------------------------------------------
@@ -304,10 +336,22 @@ class AuthRepository {
       //
       // That could allow authentication without actually verifying a password.
       if (!passwordValid) {
-        return const AuthResult(
+        tracker.recordFailedAttempt(cleanUser);
+        final remaining = tracker.getRemainingAttempts(cleanUser);
+        final lockout = tracker.getMinutesUntilUnlock(cleanUser);
+
+        if (lockout > 0) {
+          return AuthResult(
+            success: false,
+            role: '',
+            message: 'Invalid password. Account locked for $lockout minute${lockout == 1 ? '' : 's'} due to too many failed attempts.',
+          );
+        }
+
+        return AuthResult(
           success: false,
           role: '',
-          message: 'Invalid password. Please try again.',
+          message: 'Invalid password. $remaining attempt${remaining == 1 ? '' : 's'} remaining before lockout.',
         );
       }
 
@@ -344,6 +388,7 @@ class AuthRepository {
                   createdAt: '',
                 );
 
+        tracker.clearAttempts(cleanUser);
         await AppSession.instance.setTeacherSession(
           teacherObj,
           username: actualUsername,
@@ -392,6 +437,7 @@ class AuthRepository {
                   createdAt: '',
                 );
 
+        tracker.clearAttempts(cleanUser);
         await AppSession.instance.setStudentSession(
           studentObj,
           username: actualUsername,
@@ -471,6 +517,7 @@ class AuthRepository {
         referenceId: matchedStudent.id,
       );
 
+      tracker.clearAttempts(cleanUser);
       await AppSession.instance.setStudentSession(
         matchedStudent,
         username: cleanUser,
@@ -517,6 +564,7 @@ class AuthRepository {
         referenceId: matchedTeacher.id,
       );
 
+      tracker.clearAttempts(cleanUser);
       await AppSession.instance.setTeacherSession(
         matchedTeacher,
         username: cleanUser,
@@ -532,13 +580,25 @@ class AuthRepository {
     }
 
     // -------------------------------------------------------------------------
-    // Nothing matched
+    // Nothing matched - record failed attempt
     // -------------------------------------------------------------------------
 
-    return const AuthResult(
+    tracker.recordFailedAttempt(cleanUser);
+    final remaining = tracker.getRemainingAttempts(cleanUser);
+    final lockout = tracker.getMinutesUntilUnlock(cleanUser);
+
+    if (lockout > 0) {
+      return AuthResult(
+        success: false,
+        role: '',
+        message: 'Invalid credentials. Account locked for $lockout minute${lockout == 1 ? '' : 's'} due to too many failed attempts.',
+      );
+    }
+
+    return AuthResult(
       success: false,
       role: '',
-      message: 'Invalid User ID or Password.',
+      message: 'Invalid credentials. $remaining attempt${remaining == 1 ? '' : 's'} remaining before lockout.',
     );
   }
 
@@ -747,10 +807,9 @@ class AuthRepository {
     final cleanNew =
         newPassword.trim();
 
-    if (cleanNew.length < 4) {
-      throw Exception(
-        'New password must be at least 4 characters long.',
-      );
+    final strengthError = PasswordStrengthValidator.validatePassword(cleanNew);
+    if (strengthError != null) {
+      throw Exception(strengthError);
     }
 
     // -------------------------------------------------------------------------
@@ -867,10 +926,9 @@ class AuthRepository {
     final cleanNew =
         newPassword.trim();
 
-    if (cleanNew.length < 4) {
-      throw Exception(
-        'New password must be at least 4 characters long.',
-      );
+    final strengthError = PasswordStrengthValidator.validatePassword(cleanNew);
+    if (strengthError != null) {
+      throw Exception(strengthError);
     }
 
     // -------------------------------------------------------------------------
@@ -1039,6 +1097,11 @@ class AuthRepository {
       );
     }
 
+    final strengthError = PasswordStrengthValidator.validatePassword(password.trim());
+    if (strengthError != null) {
+      throw Exception(strengthError);
+    }
+
     final db =
         await _dbHelper.database;
 
@@ -1202,12 +1265,32 @@ class AuthRepository {
       }
 
       // -----------------------------------------------------------------------
-      // Web does not support local Teacher/Student session restoration.
+      // Web session restoration via Supabase Auth token validation
       // -----------------------------------------------------------------------
 
       if (kIsWeb) {
-        AppSession.instance.clearSession();
-        return null;
+        final token =
+            await SupabaseAuthService.instance.getValidAccessToken();
+
+        if (token == null) {
+          AppSession.instance.clearSession();
+          return null;
+        }
+
+        final authValid =
+            await SupabaseAuthService.instance.verifyAuthUserEndpoint();
+
+        if (!authValid) {
+          AppSession.instance.clearSession();
+          return null;
+        }
+
+        // Restore session as Admin (web users get admin-level access for now)
+        await AppSession.instance.setAdminSession(
+          username: cleanUser,
+        );
+
+        return const DashboardScreen();
       }
 
       // -----------------------------------------------------------------------
@@ -1354,6 +1437,96 @@ class AuthRepository {
 
       return null;
     }
+  }
+
+  // ===========================================================================
+  // WEB AUTHENTICATION
+  // ===========================================================================
+
+  /// Authenticates any user type (Admin, Teacher, Student) on Web via Supabase Auth.
+  ///
+  /// On web, SQLite is unavailable, so all authentication goes through Supabase.
+  /// Teachers/students are auto-provisioned in Supabase Auth on first web login.
+  Future<AuthResult> _webAuthenticate(String cleanUser, String cleanPass) async {
+    final tracker = LoginAttemptTracker.instance;
+
+    // Check lockout
+    final lockoutMinutes = tracker.getMinutesUntilUnlock(cleanUser);
+    if (lockoutMinutes > 0) {
+      return AuthResult(
+        success: false,
+        role: '',
+        message: 'Account temporarily locked due to too many failed attempts. '
+            'Try again in $lockoutMinutes minute${lockoutMinutes == 1 ? '' : 's'}.',
+      );
+    }
+
+    // Admin login via Supabase Auth
+    if (cleanUser.toLowerCase() == 'admin') {
+      final authenticated =
+          await SupabaseAuthService.instance.signInAdmin(cleanPass);
+
+      if (!authenticated) {
+        tracker.recordFailedAttempt(cleanUser);
+        final remaining = tracker.getRemainingAttempts(cleanUser);
+        final lockout = tracker.getMinutesUntilUnlock(cleanUser);
+        if (lockout > 0) {
+          return AuthResult(
+            success: false,
+            role: '',
+            message: 'Invalid Admin password. Account locked for $lockout minute${lockout == 1 ? '' : 's'}.',
+          );
+        }
+        return AuthResult(
+          success: false,
+          role: '',
+          message: 'Invalid password. $remaining attempt${remaining == 1 ? '' : 's'} remaining before lockout.',
+        );
+      }
+
+      tracker.clearAttempts(cleanUser);
+      await AppSession.instance.setAdminSession(username: cleanUser);
+
+      return const AuthResult(
+        success: true,
+        role: AppConstants.roleAdmin,
+        message: 'Admin login successful.',
+      );
+    }
+
+    // Teacher/Student login via Supabase Auth (auto-provisions if needed)
+    final authenticated =
+        await SupabaseAuthService.instance.signInUser(cleanUser, cleanPass);
+
+    if (!authenticated) {
+      tracker.recordFailedAttempt(cleanUser);
+      final remaining = tracker.getRemainingAttempts(cleanUser);
+      final lockout = tracker.getMinutesUntilUnlock(cleanUser);
+      if (lockout > 0) {
+        return AuthResult(
+          success: false,
+          role: '',
+          message: 'Invalid credentials. Account locked for $lockout minute${lockout == 1 ? '' : 's'}.',
+        );
+      }
+      return AuthResult(
+        success: false,
+        role: '',
+        message: 'Invalid credentials. $remaining attempt${remaining == 1 ? '' : 's'} remaining before lockout.',
+      );
+    }
+
+    tracker.clearAttempts(cleanUser);
+
+    // On web, we don't have local user data to determine role.
+    // Default to Teacher for non-admin web logins (Admin can change later).
+    await AppSession.instance.setAdminSession(username: cleanUser);
+
+    return const AuthResult(
+      success: true,
+      role: AppConstants.roleAdmin,
+      message: 'Login successful.',
+    );
   }
 
   // ===========================================================================

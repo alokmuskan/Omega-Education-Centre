@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../shared/constants/app_constants.dart';
+import '../../../shared/utils/login_attempt_tracker.dart';
 import '../../backup/screens/recovery_screen.dart';
 import '../../dashboard/dashboard_screen.dart';
 import '../../dashboard/student_dashboard_screen.dart';
@@ -22,12 +25,33 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthRepository _authRepository = AuthRepository();
   bool isPasswordHidden = true;
   bool _isLoggingIn = false;
+  int _lockoutSeconds = 0;
+  Timer? _lockoutTimer;
 
   @override
   void dispose() {
     usernameController.dispose();
     passwordController.dispose();
+    _lockoutTimer?.cancel();
     super.dispose();
+  }
+
+  void _startLockoutTimer() {
+    _lockoutTimer?.cancel();
+    _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      final tracker = LoginAttemptTracker.instance;
+      final seconds = tracker.getSecondsUntilUnlock(usernameController.text);
+      if (seconds <= 0) {
+        timer.cancel();
+        setState(() => _lockoutSeconds = 0);
+      } else {
+        setState(() => _lockoutSeconds = seconds);
+      }
+    });
   }
 
   Future<void> login() async {
@@ -49,8 +73,14 @@ class _LoginScreenState extends State<LoginScreen> {
           SnackBar(
             content: Text(result.message),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
+        // Start lockout timer if account is locked
+        final tracker = LoginAttemptTracker.instance;
+        if (tracker.getMinutesUntilUnlock(usernameController.text) > 0) {
+          _startLockoutTimer();
+        }
         return;
       }
 
@@ -137,6 +167,34 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
 
                     const SizedBox(height: 35),
+
+                    // Lockout warning banner
+                    if (_lockoutSeconds > 0)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.lock_clock, color: Colors.red.shade700, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Account locked. Try again in ${_lockoutSeconds ~/ 60}:${(_lockoutSeconds % 60).toString().padLeft(2, '0')}',
+                                style: TextStyle(
+                                  color: Colors.red.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
                     TextFormField(
                       controller: usernameController,

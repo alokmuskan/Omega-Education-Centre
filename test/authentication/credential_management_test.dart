@@ -38,17 +38,17 @@ void main() {
   });
 
   group('Phase — Credential Management & Authentication Hardening Tests', () {
-    test('1. Correct Admin login succeeds and derives Admin role', () async {
-      await authRepo.createUserAccount(
-        username: 'admin',
-        password: 'admin123Password',
-        role: AppConstants.roleAdmin,
+    test('1. Admin login via Supabase Auth (Admin accounts cannot be created locally)', () async {
+      // Admin accounts are managed by Supabase Auth, not local SQLite.
+      // This test verifies that attempting to create a local Admin account throws.
+      expect(
+        () => authRepo.createUserAccount(
+          username: 'admin',
+          password: 'admin123Password',
+          role: AppConstants.roleAdmin,
+        ),
+        throwsA(isA<Exception>().having((e) => e.toString(), 'message', contains('Admin'))),
       );
-
-      final result = await authRepo.login('admin', 'admin123Password');
-      expect(result.success, isTrue);
-      expect(result.role, AppConstants.roleAdmin);
-      expect(AppSession.instance.isAdmin, isTrue);
     });
 
     test('2. Correct Teacher login succeeds and derives Teacher role', () async {
@@ -100,14 +100,15 @@ void main() {
       expect(AppSession.instance.isStudent, isTrue);
     });
 
-    test('4. Incorrect password rejection', () async {
+    test('4. Incorrect password rejection for local account', () async {
+      // Use a Teacher account (Admin cannot be created locally)
       await authRepo.createUserAccount(
-        username: 'admin',
+        username: 'test_teacher_reject',
         password: 'correctPassword',
-        role: AppConstants.roleAdmin,
+        role: AppConstants.roleTeacher,
       );
 
-      final result = await authRepo.login('admin', 'wrongPassword');
+      final result = await authRepo.login('test_teacher_reject', 'wrongPassword');
       expect(result.success, isFalse);
       expect(result.message, contains('Invalid password'));
     });
