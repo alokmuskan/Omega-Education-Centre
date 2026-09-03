@@ -182,8 +182,14 @@ void main() {
     });
 
     test('12. Expired notices are filtered from active feeds', () {
-      const activeNotice = NoticeModel(id: 1, title: 'Active', message: 'A', publishDate: '2026-08-20', expiryDate: '2026-08-30');
-      const expiredNotice = NoticeModel(id: 2, title: 'Expired', message: 'B', publishDate: '2026-08-01', expiryDate: '2026-08-10');
+      final today = DateTime.now();
+      final pastStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final futureExpiry = today.add(const Duration(days: 30));
+      final futureExpiryStr = '${futureExpiry.year}-${futureExpiry.month.toString().padLeft(2, '0')}-${futureExpiry.day.toString().padLeft(2, '0')}';
+      final expiredExpiry = today.subtract(const Duration(days: 30));
+      final expiredExpiryStr = '${expiredExpiry.year}-${expiredExpiry.month.toString().padLeft(2, '0')}-${expiredExpiry.day.toString().padLeft(2, '0')}';
+      final activeNotice = NoticeModel(id: 1, title: 'Active', message: 'A', publishDate: pastStr, expiryDate: futureExpiryStr);
+      final expiredNotice = NoticeModel(id: 2, title: 'Expired', message: 'B', publishDate: pastStr, expiryDate: expiredExpiryStr);
 
       final activeFeed = [activeNotice, expiredNotice].where((n) => !n.isExpired).toList();
       expect(activeFeed.length, equals(1));

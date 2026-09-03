@@ -37,7 +37,7 @@ class _InstituteSettingsScreenState extends State<InstituteSettingsScreen> with 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadSettings();
   }
 
@@ -257,11 +257,13 @@ class _InstituteSettingsScreenState extends State<InstituteSettingsScreen> with 
         centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
           tabs: const [
             Tab(icon: Icon(Icons.business), text: 'Profile'),
             Tab(icon: Icon(Icons.calendar_today), text: 'Academic Year'),
             Tab(icon: Icon(Icons.category), text: 'Master Data'),
             Tab(icon: Icon(Icons.manage_accounts), text: 'Users'),
+            Tab(icon: Icon(Icons.shield), text: 'Security'),
           ],
         ),
       ),
@@ -274,6 +276,7 @@ class _InstituteSettingsScreenState extends State<InstituteSettingsScreen> with 
                 _buildAcademicYearTab(),
                 _buildMasterDataTab(),
                 _buildUserAccountsTab(),
+                _buildSecurityTab(),
               ],
             ),
     );
@@ -673,6 +676,163 @@ class _InstituteSettingsScreenState extends State<InstituteSettingsScreen> with 
           },
         );
       },
+    );
+  }
+
+  // ── Security Tab ──────────────────────────────────────────────────
+
+  Widget _buildSecurityTab() {
+    return FutureBuilder<int>(
+      future: AppSession.instance.getTimeoutMinutes(),
+      builder: (context, snapshot) {
+        final currentTimeout = snapshot.data ?? AppSession.defaultTimeoutMinutes;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'SECURITY SETTINGS',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Session & Authentication Security',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+
+              // Session Timeout Card
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.timer, color: Colors.indigo),
+                          SizedBox(width: 8),
+                          Text(
+                            'Session Timeout',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Automatically log out users after a period of inactivity.\n'
+                        'A warning is shown 2 minutes before expiry.',
+                        style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Timeout selector
+                      const Text(
+                        'Auto-logout after:',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _buildTimeoutChip('5 min', 5, currentTimeout),
+                          _buildTimeoutChip('10 min', 10, currentTimeout),
+                          _buildTimeoutChip('15 min', 15, currentTimeout),
+                          _buildTimeoutChip('30 min', 30, currentTimeout),
+                          _buildTimeoutChip('60 min', 60, currentTimeout),
+                          _buildTimeoutChip('Never', 0, currentTimeout),
+                        ],
+                      ),
+                    ],
+                  ),                  ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Security Info Card
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                color: Colors.green.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green),
+                          SizedBox(width: 8),
+                          Text(
+                            'Active Security Features',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _buildSecurityFeature('SQLCipher database encryption (Android/iOS/macOS)'),
+                      _buildSecurityFeature('PBKDF2 password hashing for Teacher/Student accounts'),
+                      _buildSecurityFeature('Supabase Auth for Admin authentication'),
+                      _buildSecurityFeature('Session timeout with auto-logout'),
+                      _buildSecurityFeature('Profile photos stored locally only'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTimeoutChip(String label, int minutes, int currentTimeout) {
+    final isSelected = currentTimeout == minutes;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: Colors.indigo.shade100,
+      labelStyle: TextStyle(
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        color: isSelected ? Colors.indigo.shade900 : Colors.black87,
+      ),
+      onSelected: (selected) async {
+        if (selected) {
+          await AppSession.instance.setTimeoutMinutes(minutes);
+          if (mounted) {
+            setState(() {});
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(minutes == 0
+                    ? 'Session timeout disabled'
+                    : 'Session timeout set to $minutes minutes'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        }
+      },
+    );
+  }
+
+  Widget _buildSecurityFeature(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          const Icon(Icons.check, size: 16, color: Colors.green),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text, style: const TextStyle(fontSize: 13)),
+          ),
+        ],
+      ),
     );
   }
 
