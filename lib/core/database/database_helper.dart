@@ -1,5 +1,11 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart' as sqlcipher;
+
+import '../../shared/utils/encryption_key_manager.dart';
 
 /// Singleton SQLite database helper.
 ///
@@ -31,6 +37,16 @@ class DatabaseHelper {
 
   static Database? _database;
 
+  /// Whether the current platform supports SQLCipher encryption.
+  /// Android, iOS, and macOS are supported.
+  /// Windows and Linux rely on OS-level disk encryption.
+  bool get _supportsSqlCipher {
+    if (kIsWeb) return false;
+    // Skip encryption in test environments (no native SQLCipher plugin).
+    if (EncryptionKeyManager.testMode) return false;
+    return Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
+  }
+
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
@@ -41,17 +57,71 @@ class DatabaseHelper {
     final String databasePath = await getDatabasesPath();
     final String path = join(databasePath, 'omega_education.db');
 
-    final db = await openDatabase(
-      path,
-      version: 18,
-      onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
-    );
+    // On mobile platforms (Android/iOS/macOS), open with SQLCipher encryption.
+    // On desktop (Windows/Linux), rely on OS-level disk encryption.
+    Database db;
+    if (_supportsSqlCipher) {
+      final key = await EncryptionKeyManager.instance.getEncryptionKey();
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print('[DB] Opening encrypted database on ${Platform.operatingSystem}');
+      }
+      try {
+        db = await sqlcipher.openDatabase(path, version: 18, password: key, onCreate: _onCreate, onUpgrade: _onUpgrade);
+      } catch (e) {
+        // Existing DB might be unencrypted — migrate it.
+        if (kDebugMode) {
+          // ignore: avoid_print
+          print('[DB] Open failed, migrating to encrypted: $e');
+        }
+        db = await _migrateToEncrypted(path, key);
+      }
+    } else {
+      if (kDebugMode && !kIsWeb) {
+        // ignore: avoid_print
+        print('[DB] Opening database on ${Platform.operatingSystem}');
+      }
+      db = await openDatabase(path, version: 18, onCreate: _onCreate, onUpgrade: _onUpgrade);
+    }
 
     // Auto-repair notices table columns for any existing database installation
     await _ensureNoticeTableColumns(db);
 
     return db;
+  }
+
+  /// Migrates an existing unencrypted database to an encrypted one.
+  Future<Database> _migrateToEncrypted(String dbPath, String key) async {
+    final tempPath = '$dbPath.encrypted';
+    final oldFile = File(dbPath);
+
+    // Open old unencrypted DB, create new encrypted DB, copy data, replace.
+    final oldDb = await openDatabase(dbPath, version: 18);
+    final newDb = await sqlcipher.openDatabase(tempPath, version: 18, password: key, onCreate: _onCreate);
+    await _copyAllTables(oldDb, newDb);
+    await oldDb.close();
+    await newDb.close();
+
+    if (await oldFile.exists()) await oldFile.delete();
+    await File(tempPath).rename(dbPath);
+
+    if (kDebugMode) {
+      // ignore: avoid_print
+      print('[DB] Migration to encrypted database complete');
+    }
+    return sqlcipher.openDatabase(dbPath, version: 18, password: key, onCreate: _onCreate, onUpgrade: _onUpgrade);
+  }
+
+  /// Copies all data from source to destination database.
+  Future<void> _copyAllTables(Database source, Database dest) async {
+    final tables = await source.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
+    for (final table in tables) {
+      final name = table['name'] as String;
+      final rows = await source.query(name);
+      for (final row in rows) {
+        await dest.insert(name, row);
+      }
+    }
   }
 
   // ──────────────────────────────────────────────────────────────────────

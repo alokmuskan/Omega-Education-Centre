@@ -2,7 +2,7 @@
 
 > A structured, phased roadmap to transform the ERP from its current state into a production-grade, sellable product. Each phase has clear milestones, deliverables, dependencies, and acceptance criteria.
 
----
+--- 
 
 ## How to Read This Plan
 

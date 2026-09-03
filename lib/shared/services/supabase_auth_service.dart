@@ -76,6 +76,112 @@ class SupabaseAuthService {
     return null;
   }
 
+  /// Authenticates a user (Admin, Teacher, or Student) with Supabase Auth.
+  ///
+  /// Maps the userId to `userId@omega.internal` email format.
+  /// Password is NOT stored or persisted. Auto-provisions if user doesn't exist.
+  /// Used for web login where SQLite is unavailable.
+  Future<bool> signInUser(String userId, String password) async {
+    final email = CentralAuthService.mapUserIdToEmail(userId);
+
+    final anonKey = BackendConfig.supabaseAnonKey ?? '';
+    final url = Uri.parse('${BackendConfig.supabaseUrl}/auth/v1/token?grant_type=password');
+
+    if (kDebugMode) {
+      // ignore: avoid_print
+      print('[AUTH-DIAG] signInUser called for userId=$userId');
+      // ignore: avoid_print
+      print('[AUTH-DIAG] Mapped email = $email');
+    }
+
+    if (!BackendConfig.isBackendConfigured) {
+      return false;
+    }
+
+    try {
+      final res = await http
+          .post(
+            url,
+            headers: {
+              'apikey': anonKey,
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'email': email,
+              'password': password,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(res.body) as Map<String, dynamic>;
+        _accessToken = data['access_token'] as String?;
+        _refreshToken = data['refresh_token'] as String?;
+        final expiresIn = (data['expires_in'] as int?) ?? 3600;
+        _tokenExpiry = DateTime.now().add(Duration(seconds: expiresIn - 60));
+
+        final userObj = data['user'] as Map<String, dynamic>?;
+        if (userObj != null && userObj['id'] != null) {
+          _authUserId = userObj['id'] as String;
+        }
+
+        if (_refreshToken != null && _refreshToken!.isNotEmpty) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString(_keyRefreshToken, _refreshToken!);
+          } catch (_) {}
+        }
+
+        return true;
+      } else if (res.statusCode == 400) {
+        // Auto-provision: sign up the user if they don't exist yet
+        final signupUrl = Uri.parse('${BackendConfig.supabaseUrl}/auth/v1/signup');
+        final signupRes = await http
+            .post(
+              signupUrl,
+              headers: {
+                'apikey': anonKey,
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode({
+                'email': email,
+                'password': password,
+              }),
+            )
+            .timeout(const Duration(seconds: 10));
+
+        if (signupRes.statusCode == 200 || signupRes.statusCode == 201) {
+          final Map<String, dynamic> signupData = jsonDecode(signupRes.body) as Map<String, dynamic>;
+          if (signupData.containsKey('access_token') && signupData['access_token'] != null) {
+            _accessToken = signupData['access_token'] as String?;
+            _refreshToken = signupData['refresh_token'] as String?;
+            final expiresIn = (signupData['expires_in'] as int?) ?? 3600;
+            _tokenExpiry = DateTime.now().add(Duration(seconds: expiresIn - 60));
+
+            final userObj = signupData['user'] as Map<String, dynamic>?;
+            if (userObj != null && userObj['id'] != null) {
+              _authUserId = userObj['id'] as String;
+            }
+
+            if (_refreshToken != null && _refreshToken!.isNotEmpty) {
+              try {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setString(_keyRefreshToken, _refreshToken!);
+              } catch (_) {}
+            }
+
+            return true;
+          }
+        }
+        return false;
+      }
+      return false;
+    } catch (e) {
+      await _clearSessionPayload();
+      return false;
+    }
+  }
+
   /// Authenticates Admin with Supabase Auth using transient password entered during login.
   ///
   /// Maps `admin` to `admin@omega.internal`. Password is NOT stored or persisted.

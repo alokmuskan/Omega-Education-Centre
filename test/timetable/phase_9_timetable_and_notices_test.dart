@@ -200,7 +200,8 @@ void main() {
     });
 
     test('18. Future publish date notice is hidden from users before publishDate', () {
-      const futureNotice = NoticeModel(id: 1, title: 'Future', message: 'M', publishDate: '2026-08-30');
+      final futureDate = DateTime.now().add(const Duration(days: 30));
+      final futureNotice = NoticeModel(id: 1, title: 'Future', message: 'M', publishDate: '${futureDate.year}-${futureDate.month.toString().padLeft(2, '0')}-${futureDate.day.toString().padLeft(2, '0')}');
       expect(futureNotice.isFuturePublish, isTrue);
 
       final userFeed = [futureNotice].where((n) => !n.isFuturePublish).toList();

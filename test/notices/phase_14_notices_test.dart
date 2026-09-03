@@ -116,11 +116,12 @@ void main() {
     });
 
     test('8. Future publish date restriction', () {
-      const futureNotice = NoticeModel(
+      final futureDate = DateTime.now().add(const Duration(days: 30));
+      final futureNotice = NoticeModel(
         id: 3,
         title: 'Future Notice',
         message: 'Scheduled for next week',
-        publishDate: '2026-09-01', // Future date relative to 2026-08-23
+        publishDate: '${futureDate.year}-${futureDate.month.toString().padLeft(2, '0')}-${futureDate.day.toString().padLeft(2, '0')}',
         isPublished: true,
       );
 
@@ -246,12 +247,15 @@ void main() {
     });
 
     test('15 & 16 & 17. Student, Teacher, and Admin feed filtering simulation', () {
+      final today = DateTime.now();
+      final pastStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final futureStr = '${today.add(const Duration(days: 30)).year}-${today.add(const Duration(days: 30)).month.toString().padLeft(2, '0')}-${today.add(const Duration(days: 30)).day.toString().padLeft(2, '0')}';
       final notices = [
-        const NoticeModel(id: 1, title: 'All Notice', message: 'M', targetRole: 'Everyone', publishDate: '2026-08-20', isPublished: true),
-        const NoticeModel(id: 2, title: 'Student Notice', message: 'M', targetRole: 'Students', publishDate: '2026-08-20', isPublished: true),
-        const NoticeModel(id: 3, title: 'Teacher Notice', message: 'M', targetRole: 'Teachers', publishDate: '2026-08-20', isPublished: true),
-        const NoticeModel(id: 4, title: 'Draft Notice', message: 'M', targetRole: 'Everyone', publishDate: '2026-08-20', isPublished: false),
-        const NoticeModel(id: 5, title: 'Future Notice', message: 'M', targetRole: 'Everyone', publishDate: '2026-09-01', isPublished: true),
+        NoticeModel(id: 1, title: 'All Notice', message: 'M', targetRole: 'Everyone', publishDate: pastStr, isPublished: true),
+        NoticeModel(id: 2, title: 'Student Notice', message: 'M', targetRole: 'Students', publishDate: pastStr, isPublished: true),
+        NoticeModel(id: 3, title: 'Teacher Notice', message: 'M', targetRole: 'Teachers', publishDate: pastStr, isPublished: true),
+        NoticeModel(id: 4, title: 'Draft Notice', message: 'M', targetRole: 'Everyone', publishDate: pastStr, isPublished: false),
+        NoticeModel(id: 5, title: 'Future Notice', message: 'M', targetRole: 'Everyone', publishDate: futureStr, isPublished: true),
       ];
 
       // Student view: active, published, non-future, non-expired, student/everyone targeted
@@ -446,11 +450,15 @@ void main() {
     });
 
     test('32 & 33 & 34. Non-admin feed exclusions (archived, future, expired)', () {
+      final today = DateTime.now();
+      final pastStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final futureStr = '${today.add(const Duration(days: 30)).year}-${today.add(const Duration(days: 30)).month.toString().padLeft(2, '0')}-${today.add(const Duration(days: 30)).day.toString().padLeft(2, '0')}';
+      final expiredStr = '${today.subtract(const Duration(days: 30)).year}-${today.subtract(const Duration(days: 30)).month.toString().padLeft(2, '0')}-${today.subtract(const Duration(days: 30)).day.toString().padLeft(2, '0')}';
       final list = [
-        const NoticeModel(id: 1, title: 'Valid', message: 'M', publishDate: '2026-08-20', isPublished: true, isActive: true),
-        const NoticeModel(id: 2, title: 'Archived', message: 'M', publishDate: '2026-08-20', isPublished: true, isActive: false),
-        const NoticeModel(id: 3, title: 'Future', message: 'M', publishDate: '2026-09-01', isPublished: true, isActive: true),
-        const NoticeModel(id: 4, title: 'Expired', message: 'M', publishDate: '2026-08-01', expiryDate: '2026-08-10', isPublished: true, isActive: true),
+        NoticeModel(id: 1, title: 'Valid', message: 'M', publishDate: pastStr, isPublished: true, isActive: true),
+        NoticeModel(id: 2, title: 'Archived', message: 'M', publishDate: pastStr, isPublished: true, isActive: false),
+        NoticeModel(id: 3, title: 'Future', message: 'M', publishDate: futureStr, isPublished: true, isActive: true),
+        NoticeModel(id: 4, title: 'Expired', message: 'M', publishDate: pastStr, expiryDate: expiredStr, isPublished: true, isActive: true),
       ];
 
       final feed = list.where((n) => n.isPublished && n.isActive && !n.isExpired && !n.isFuturePublish).toList();

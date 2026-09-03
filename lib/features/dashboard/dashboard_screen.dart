@@ -1,8 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import '../../core/database/database_helper.dart';
+import '../../shared/config/backend_config.dart';
+import '../../shared/services/supabase_auth_service.dart';
 import '../../shared/utils/app_session.dart';
 import '../attendance/screens/attendance_main_screen.dart';
 import '../class_register/screens/daily_class_register_main_screen.dart';
@@ -64,43 +69,130 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Future<void> _loadDashboardData({bool silent = false}) async {
-        // Chrome/Web cannot use the application's SQLite database layer.
-    // Keep the dashboard usable on Web while the Web data layer is migrated.
-    if (kIsWeb) {
-      if (!mounted) return;
+  /// Loads dashboard data from Supabase REST API for Web platform.
+  Future<void> _loadDashboardDataFromSupabase() async {
+    try {
+      if (!BackendConfig.isBackendConfigured) {
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _errorMessage = null;
+        });
+        return;
+      }
 
+      final anonKey = BackendConfig.supabaseAnonKey ?? '';
+      final jwtToken = await SupabaseAuthService.instance.getValidAccessToken();
+      if (jwtToken == null) {
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Not authenticated. Please log in again.';
+        });
+        return;
+      }
+
+      final headers = {
+        'apikey': anonKey,
+        'Authorization': 'Bearer $jwtToken',
+        'Content-Type': 'application/json',
+      };
+      final baseUrl = BackendConfig.supabaseUrl!;
+
+      // Fetch students count
+      int studentCount = 0;
+      try {
+        final res = await http.get(
+          Uri.parse('$baseUrl/rest/v1/students?select=id&isActive=eq.true'),
+          headers: headers,
+        ).timeout(const Duration(seconds: 10));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body) as List;
+          studentCount = data.length;
+        }
+      } catch (_) {}
+
+      // Fetch teachers count
+      int teacherCount = 0;
+      try {
+        final res = await http.get(
+          Uri.parse('$baseUrl/rest/v1/teachers?select=id&isActive=eq.true'),
+          headers: headers,
+        ).timeout(const Duration(seconds: 10));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body) as List;
+          teacherCount = data.length;
+        }
+      } catch (_) {}
+
+      // Fetch fee due
+      double feeDue = 0.0;
+      try {
+        final res = await http.get(
+          Uri.parse('$baseUrl/rest/v1/fee_payments?select=amountPaid'),
+          headers: headers,
+        ).timeout(const Duration(seconds: 10));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body) as List;
+          for (final row in data) {
+            feeDue += (row['amountPaid'] as num?)?.toDouble() ?? 0.0;
+          }
+        }
+      } catch (_) {}
+
+      // Fetch recent notices
+      List<dynamic> recentNotices = [];
+      try {
+        final res = await http.get(
+          Uri.parse('$baseUrl/rest/v1/notices?select=*&order=createdAt.desc&limit=5'),
+          headers: headers,
+        ).timeout(const Duration(seconds: 10));
+        if (res.statusCode == 200) {
+          recentNotices = jsonDecode(res.body) as List;
+        }
+      } catch (_) {}
+
+      if (!mounted) return;
       setState(() {
-        _studentCount = 0;
-        _teacherCount = 0;
+        _studentCount = studentCount;
+        _teacherCount = teacherCount;
         _classesTodayCount = 0;
         _teacherHoursToday = 0.0;
-
         _studentPresentCount = 0;
         _studentAbsentCount = 0;
         _studentLateCount = 0;
         _studentLeaveCount = 0;
-
         _teachersRecordedCount = 0;
-        _centerFeeDue = 0.0;
+        _centerFeeDue = feeDue;
         _centerSalaryDue = 0.0;
-
         _todayClassesList = [];
         _recentTestsList = [];
-        _recentNoticesList = [];
-
+        _recentNoticesList = recentNotices;
         _isLoading = false;
         _errorMessage = null;
       });
-
-      return;
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Failed to load data: $e';
+      });
     }
+  }
+
+  Future<void> _loadDashboardData({bool silent = false}) async {
     if (!mounted) return;
     if (!silent) {
       setState(() {
         _isLoading = true;
         _errorMessage = null;
       });
+    }
+
+    // Web: fetch data from Supabase REST API
+    if (kIsWeb) {
+      await _loadDashboardDataFromSupabase();
+      return;
     }
 
     try {

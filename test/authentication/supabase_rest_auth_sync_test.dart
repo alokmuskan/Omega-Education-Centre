@@ -5,11 +5,13 @@ import 'package:omega_education_centre/shared/services/supabase_auth_service.dar
 import 'package:omega_education_centre/shared/services/sync_engine.dart';
 import 'package:omega_education_centre/shared/services/sync_queue_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:omega_education_centre/shared/utils/encryption_key_manager.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
+  EncryptionKeyManager.testMode = true;
 
   group('Supabase Credentials + Auth + RLS + REST Sync Forensic Unit Tests', () {
     late SyncQueueRepository queueRepo;
@@ -21,10 +23,10 @@ void main() {
       SupabaseAuthService.instance.clearSession();
     });
 
-    test('1. BackendConfig uses correct production URL and publishable key', () {
-      expect(BackendConfig.defaultProductionUrl, equals('https://blipqkeaqjyockqprqsi.supabase.co'));
-      expect(BackendConfig.supabaseAnonKey, equals('sb_publishable_SIy4fugozVmYZwCtUhWwSQ_wc_wTzqQ'));
+    test('1. BackendConfig has valid configuration structure', () {
+      // Verify BackendConfig has correct defaults and API
       expect(BackendConfig.defaultOrgCode, equals('ORG_OMEGA_DEFAULT'));
+      expect(BackendConfig.isBackendConfigured, isFalse);
     });
 
     test('2. SupabaseAuthService returns null for access JWT when unauthenticated (No publishable key fallback)', () async {
@@ -35,8 +37,8 @@ void main() {
 
     test('3. SyncEngine sets status to authError when unauthenticated (No protected REST CRUD sent)', () async {
       BackendConfig.initialize(
-        url: 'https://blipqkeaqjyockqprqsi.supabase.co',
-        anonKey: 'sb_publishable_SIy4fugozVmYZwCtUhWwSQ_wc_wTzqQ',
+        url: 'https://test.supabase.co',
+        anonKey: 'test-anon-key',
       );
 
       // Queue a pending item

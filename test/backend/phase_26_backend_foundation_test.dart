@@ -4,11 +4,13 @@ import 'package:omega_education_centre/core/database/database_helper.dart';
 import 'package:omega_education_centre/shared/config/backend_config.dart';
 import 'package:omega_education_centre/shared/utils/app_session.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:omega_education_centre/shared/utils/encryption_key_manager.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
+  EncryptionKeyManager.testMode = true;
 
   group('Phase 26 — Multi-Device Backend Foundation Unit Tests', () {
     test('1. Verify Supabase DDL SQL script exists and contains core tables', () {

@@ -8,11 +8,13 @@ import 'package:omega_education_centre/shared/services/supabase_health_service.d
 import 'package:omega_education_centre/shared/utils/app_session.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:omega_education_centre/shared/utils/encryption_key_manager.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
+  EncryptionKeyManager.testMode = true;
 
   group('Phase 28 — Central Authentication Foundation Unit Tests', () {
     late AuthRepository authRepository;

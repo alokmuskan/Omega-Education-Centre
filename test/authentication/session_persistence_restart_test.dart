@@ -9,11 +9,13 @@ import 'package:omega_education_centre/shared/constants/app_constants.dart';
 import 'package:omega_education_centre/shared/utils/app_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:omega_education_centre/shared/utils/encryption_key_manager.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
+  EncryptionKeyManager.testMode = true;
 
   group('Session Persistence & Process Termination Unit Tests', () {
     late AuthRepository authRepository;

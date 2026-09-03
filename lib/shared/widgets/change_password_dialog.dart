@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../features/authentication/repository/auth_repository.dart';
 import '../utils/app_session.dart';
+import '../utils/password_strength_validator.dart';
+import 'password_strength_indicator.dart';
 
 /// Reusable self-service dialog for logged-in Teachers and Students to change their password.
 class ChangePasswordDialog extends StatefulWidget {
@@ -139,6 +141,7 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
               TextFormField(
                 controller: _newPasswordController,
                 obscureText: _hideNew,
+                onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
                   labelText: 'New Password *',
                   prefixIcon: const Icon(Icons.key),
@@ -150,9 +153,16 @@ class _ChangePasswordDialogState extends State<ChangePasswordDialog> {
                 ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Enter new password';
-                  if (v.trim().length < 4) return 'Password must be at least 4 characters';
+                  final error = PasswordStrengthValidator.validatePassword(v.trim());
+                  if (error != null) return error;
                   return null;
                 },
+              ),
+              const SizedBox(height: 8),
+
+              // Password Strength Indicator
+              PasswordStrengthIndicator(
+                password: _newPasswordController.text,
               ),
               const SizedBox(height: 14),
 
