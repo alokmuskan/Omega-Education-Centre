@@ -197,8 +197,10 @@ The app uses **SQLite** with **19 tables** and versioned migrations (v1 → v18)
 
 Detailed documentation is available in the [`docs/`](docs/) folder:
 
+- [Development Guide](docs/development_guide.md) — How to run, build, test, and contribute
+- [Improvements Analysis](docs/improvements_analysis.md) — Full audit of all 40 improvements needed
+- [Implementation Plan](docs/implementation_plan.md) — Phased 16-week roadmap to production
 - [Supabase Setup Guide](docs/supabase_setup_guide.md) — Full backend setup instructions
-- [Supabase Configuration](docs/supabase_setup.md) — Credential security and data privacy
 
 ## Security
 
