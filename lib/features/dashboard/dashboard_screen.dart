@@ -24,6 +24,7 @@ import '../teachers/screens/teacher_screen.dart';
 import '../tests/repository/test_repository.dart';
 import '../tests/screens/tests_main_screen.dart';
 import 'widgets/dashboard_header.dart';
+import '../audit/screens/audit_log_screen.dart';
 import 'widgets/menu_card.dart';
 import 'widgets/summary_card.dart';
 import '../../shared/services/sync_engine.dart';
@@ -98,8 +99,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'Content-Type': 'application/json',
       };
       final baseUrl = BackendConfig.supabaseUrl!;
+      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-      // Fetch students count
+      // 1. Active Students Count
       int studentCount = 0;
       try {
         final res = await http.get(
@@ -112,7 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       } catch (_) {}
 
-      // Fetch teachers count
+      // 2. Active Teachers Count
       int teacherCount = 0;
       try {
         final res = await http.get(
@@ -125,22 +127,189 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       } catch (_) {}
 
-      // Fetch fee due
-      double feeDue = 0.0;
+      // 3. Classes Today Count
+      int classesTodayCount = 0;
       try {
         final res = await http.get(
-          Uri.parse('$baseUrl/rest/v1/fee_payments?select=amountPaid'),
+          Uri.parse('$baseUrl/rest/v1/daily_class_records?select=id&date=eq.$todayStr'),
+          headers: headers,
+        ).timeout(const Duration(seconds: 10));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body) as List;
+          classesTodayCount = data.length;
+        }
+      } catch (_) {}
+
+      // 4. Teacher Hours Worked Today
+      double teacherHoursToday = 0.0;
+      try {
+        final res = await http.get(
+          Uri.parse('$baseUrl/rest/v1/teacher_attendance?select=hoursWorked&date=eq.$todayStr'),
           headers: headers,
         ).timeout(const Duration(seconds: 10));
         if (res.statusCode == 200) {
           final data = jsonDecode(res.body) as List;
           for (final row in data) {
-            feeDue += (row['amountPaid'] as num?)?.toDouble() ?? 0.0;
+            teacherHoursToday += (row['hoursWorked'] as num?)?.toDouble() ?? 0.0;
           }
         }
       } catch (_) {}
 
-      // Fetch recent notices
+      // 5. Student Attendance Today Breakdown
+      int studentPresentCount = 0;
+      int studentAbsentCount = 0;
+      int studentLateCount = 0;
+      int studentLeaveCount = 0;
+      try {
+        final res = await http.get(
+          Uri.parse('$baseUrl/rest/v1/student_attendance?select=status&date=eq.$todayStr'),
+          headers: headers,
+        ).timeout(const Duration(seconds: 10));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body) as List;
+          for (final row in data) {
+            final status = (row['status'] as String?) ?? '';
+            if (status == 'Present') {
+              studentPresentCount++;
+            } else if (status == 'Absent') {
+              studentAbsentCount++;
+            } else if (status == 'Late') {
+              studentLateCount++;
+            } else if (status == 'Leave') {
+              studentLeaveCount++;
+            }
+          }
+        }
+      } catch (_) {}
+
+      // 6. Teacher Attendance Recorded Count Today
+      int teachersRecordedCount = 0;
+      try {
+        final res = await http.get(
+          Uri.parse('$baseUrl/rest/v1/teacher_attendance?select=teacherId&date=eq.$todayStr'),
+          headers: headers,
+        ).timeout(const Duration(seconds: 10));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body) as List;
+          final uniqueTeachers = <dynamic>{};
+          for (final row in data) {
+            uniqueTeachers.add(row['teacherId']);
+          }
+          teachersRecordedCount = uniqueTeachers.length;
+        }
+      } catch (_) {}
+
+      // 7. Fee Due (total outstanding = courseFee - sum of amountPaid per student)
+      double centerFeeDue = 0.0;
+      try {
+        final res = await http.get(
+          Uri.parse('$baseUrl/rest/v1/fees?select=courseFee'),
+          headers: headers,
+        ).timeout(const Duration(seconds: 10));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body) as List;
+          for (final row in data) {
+            centerFeeDue += (row['courseFee'] as num?)?.toDouble() ?? 0.0;
+          }
+        }
+        // Subtract paid amounts
+        final paidRes = await http.get(
+          Uri.parse('$baseUrl/rest/v1/fee_payments?select=amountPaid'),
+          headers: headers,
+        ).timeout(const Duration(seconds: 10));
+        if (paidRes.statusCode == 200) {
+          final paidData = jsonDecode(paidRes.body) as List;
+          double totalPaid = 0.0;
+          for (final row in paidData) {
+            totalPaid += (row['amountPaid'] as num?)?.toDouble() ?? 0.0;
+          }
+          centerFeeDue = centerFeeDue - totalPaid;
+          if (centerFeeDue < 0) centerFeeDue = 0.0;
+        }
+      } catch (_) {}
+
+      // 8. Salary Due (current month)
+      double centerSalaryDue = 0.0;
+      try {
+        final currentMonth = DateFormat('yyyy-MM').format(DateTime.now());
+        // Fetch all active teachers' pay rates
+        final teachersRes = await http.get(
+          Uri.parse('$baseUrl/rest/v1/teachers?select=id,payPerHour&isActive=eq.true'),
+          headers: headers,
+        ).timeout(const Duration(seconds: 10));
+        if (teachersRes.statusCode == 200) {
+          final teachersData = jsonDecode(teachersRes.body) as List;
+          for (final t in teachersData) {
+            final tId = t['id'];
+            final payRate = (t['payPerHour'] as num?)?.toDouble() ?? 0.0;
+            // Fetch hours worked this month for this teacher
+            final hoursRes = await http.get(
+              Uri.parse('$baseUrl/rest/v1/teacher_attendance?select=hoursWorked&teacherId=eq.$tId&date=like.$currentMonth%'),
+              headers: headers,
+            ).timeout(const Duration(seconds: 10));
+            double hoursWorked = 0.0;
+            if (hoursRes.statusCode == 200) {
+              final hoursData = jsonDecode(hoursRes.body) as List;
+              for (final h in hoursData) {
+                hoursWorked += (h['hoursWorked'] as num?)?.toDouble() ?? 0.0;
+              }
+            }
+            // Fetch paid amount this month
+            final paidRes = await http.get(
+              Uri.parse('$baseUrl/rest/v1/teacher_payments?select=amount&teacherId=eq.$tId&year=eq.${DateTime.now().year}'),
+              headers: headers,
+            ).timeout(const Duration(seconds: 10));
+            double paid = 0.0;
+            if (paidRes.statusCode == 200) {
+              final paidData = jsonDecode(paidRes.body) as List;
+              for (final p in paidData) {
+                paid += (p['amount'] as num?)?.toDouble() ?? 0.0;
+              }
+            }
+            final expected = hoursWorked * payRate;
+            final due = expected - paid;
+            if (due > 0) centerSalaryDue += due;
+          }
+        }
+      } catch (_) {}
+
+      // 9. Today's Classes List (limit 3)
+      List<Map<String, dynamic>> todayClassesList = [];
+      try {
+        final res = await http.get(
+          Uri.parse('$baseUrl/rest/v1/daily_class_records?select=*,teachers(name)&date=eq.$todayStr&order=startTime.asc&limit=3'),
+          headers: headers,
+        ).timeout(const Duration(seconds: 10));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body) as List;
+          todayClassesList = data.map<Map<String, dynamic>>((c) {
+            final teacherName = (c['teachers'] as Map<String, dynamic>?)?['name'] as String? ?? 'Teacher';
+            return {
+              'time': c['startTime'] as String? ?? '--:--',
+              'class': c['studentClass'] as String? ?? '',
+              'batch': c['batch'] as String? ?? '',
+              'teacher': teacherName,
+              'subject': c['subject'] as String? ?? '',
+              'topic': c['topic'] as String? ?? '',
+              'duration': '${c['durationMinutes']} mins',
+            };
+          }).toList();
+        }
+      } catch (_) {}
+
+      // 10. Recent Tests (limit 3)
+      List<dynamic> recentTestsList = [];
+      try {
+        final res = await http.get(
+          Uri.parse('$baseUrl/rest/v1/tests?select=*&order=createdAt.desc&limit=3'),
+          headers: headers,
+        ).timeout(const Duration(seconds: 10));
+        if (res.statusCode == 200) {
+          recentTestsList = jsonDecode(res.body) as List;
+        }
+      } catch (_) {}
+
+      // 11. Recent Notices (limit 5)
       List<dynamic> recentNotices = [];
       try {
         final res = await http.get(
@@ -156,17 +325,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       setState(() {
         _studentCount = studentCount;
         _teacherCount = teacherCount;
-        _classesTodayCount = 0;
-        _teacherHoursToday = 0.0;
-        _studentPresentCount = 0;
-        _studentAbsentCount = 0;
-        _studentLateCount = 0;
-        _studentLeaveCount = 0;
-        _teachersRecordedCount = 0;
-        _centerFeeDue = feeDue;
-        _centerSalaryDue = 0.0;
-        _todayClassesList = [];
-        _recentTestsList = [];
+        _classesTodayCount = classesTodayCount;
+        _teacherHoursToday = teacherHoursToday;
+        _studentPresentCount = studentPresentCount;
+        _studentAbsentCount = studentAbsentCount;
+        _studentLateCount = studentLateCount;
+        _studentLeaveCount = studentLeaveCount;
+        _teachersRecordedCount = teachersRecordedCount;
+        _centerFeeDue = centerFeeDue;
+        _centerSalaryDue = centerSalaryDue;
+        _todayClassesList = todayClassesList;
+        _recentTestsList = recentTestsList;
         _recentNoticesList = recentNotices;
         _isLoading = false;
         _errorMessage = null;
@@ -787,6 +956,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       icon: Icons.settings,
                                       color: Colors.blueAccent,
                                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InstituteSettingsScreen())).then((_) => _loadDashboardData(silent: true)),
+                                    ),
+                                    MenuCard(
+                                      title: "Audit Log",
+                                      icon: Icons.history,
+                                      color: Colors.teal,
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AuditLogScreen())).then((_) => _loadDashboardData(silent: true)),
                                     ),
                                   ],
                                 ),

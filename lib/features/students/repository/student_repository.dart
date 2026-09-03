@@ -1,5 +1,6 @@
 import '../../../core/database/database_helper.dart';
 import '../../../shared/constants/app_constants.dart';
+import '../../../shared/services/audit_service.dart';
 import '../../../shared/services/sync_engine.dart';
 import '../../../shared/utils/password_util.dart';
 import '../models/student_model.dart';
@@ -47,6 +48,14 @@ class StudentRepository {
       payload: createdStudent.toMap(),
     );
 
+    // Audit log
+    await AuditService.instance.logAction(
+      action: AuditService.actionStudentCreate,
+      entityType: 'students',
+      entityId: id.toString(),
+      newValue: student.toMap(),
+    );
+
     return id;
   }
 
@@ -89,6 +98,14 @@ class StudentRepository {
 
   Future<int> updateStudent(StudentModel student) async {
     final db = await _databaseHelper.database;
+
+    // Capture old state for audit
+    Map<String, dynamic>? oldState;
+    if (student.id != null) {
+      final oldMaps = await db.query('students', where: 'id = ?', whereArgs: [student.id], limit: 1);
+      if (oldMaps.isNotEmpty) oldState = Map<String, dynamic>.from(oldMaps.first);
+    }
+
     final result = await db.update(
       'students',
       student.toMap(),
@@ -101,6 +118,15 @@ class StudentRepository {
         studentId: student.id!,
         operation: 'UPDATE',
         payload: student.toMap(),
+      );
+
+      // Audit log
+      await AuditService.instance.logAction(
+        action: AuditService.actionStudentUpdate,
+        entityType: 'students',
+        entityId: student.id.toString(),
+        oldValue: oldState,
+        newValue: student.toMap(),
       );
     }
 
@@ -142,6 +168,14 @@ class StudentRepository {
       studentId: id,
       operation: 'DELETE',
       payload: {'id': id, 'isActive': 0},
+    );
+
+    // Audit log
+    await AuditService.instance.logAction(
+      action: AuditService.actionStudentDelete,
+      entityType: 'students',
+      entityId: id.toString(),
+      newValue: {'id': id, 'isActive': 0},
     );
 
     return result;

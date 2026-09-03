@@ -482,21 +482,37 @@ class SyncEngine {
 
     if (!isOnline) return;
 
-    // Pull students.
-    await _pullEntityRecords(
-      entityType: 'students',
-      localTableName: 'students',
-      idField: 'id',
-      jwtToken: jwtToken,
-    );
+    // Pull core entities.
+    await _pullEntityRecords(entityType: 'students', localTableName: 'students', idField: 'id', jwtToken: jwtToken);
+    await _pullEntityRecords(entityType: 'teachers', localTableName: 'teachers', idField: 'id', jwtToken: jwtToken);
+    await _pullEntityRecords(entityType: 'users', localTableName: 'users', idField: 'id', jwtToken: jwtToken);
 
-    // Pull teachers.
-    await _pullEntityRecords(
-      entityType: 'teachers',
-      localTableName: 'teachers',
-      idField: 'id',
-      jwtToken: jwtToken,
-    );
+    // Pull fee management.
+    await _pullEntityRecords(entityType: 'fees', localTableName: 'fees', idField: 'id', jwtToken: jwtToken);
+    await _pullEntityRecords(entityType: 'fee_payments', localTableName: 'fee_payments', idField: 'id', jwtToken: jwtToken);
+    await _pullEntityRecords(entityType: 'fee_installments', localTableName: 'fee_installments', idField: 'id', jwtToken: jwtToken);
+
+    // Pull attendance.
+    await _pullEntityRecords(entityType: 'student_attendance', localTableName: 'student_attendance', idField: 'id', jwtToken: jwtToken);
+    await _pullEntityRecords(entityType: 'teacher_attendance', localTableName: 'teacher_attendance', idField: 'id', jwtToken: jwtToken);
+
+    // Pull salary.
+    await _pullEntityRecords(entityType: 'teacher_payments', localTableName: 'teacher_payments', idField: 'id', jwtToken: jwtToken);
+    await _pullEntityRecords(entityType: 'teacher_pay_rate_history', localTableName: 'teacher_pay_rate_history', idField: 'id', jwtToken: jwtToken);
+
+    // Pull tests & results.
+    await _pullEntityRecords(entityType: 'tests', localTableName: 'tests', idField: 'id', jwtToken: jwtToken);
+    await _pullEntityRecords(entityType: 'test_subjects', localTableName: 'test_subjects', idField: 'id', jwtToken: jwtToken);
+    await _pullEntityRecords(entityType: 'test_results', localTableName: 'test_results', idField: 'id', jwtToken: jwtToken);
+
+    // Pull timetable & notices.
+    await _pullEntityRecords(entityType: 'daily_class_records', localTableName: 'daily_class_records', idField: 'id', jwtToken: jwtToken);
+    await _pullEntityRecords(entityType: 'timetable_entries', localTableName: 'timetable_entries', idField: 'id', jwtToken: jwtToken);
+    await _pullEntityRecords(entityType: 'notices', localTableName: 'notices', idField: 'id', jwtToken: jwtToken);
+    await _pullEntityRecords(entityType: 'notice_reads', localTableName: 'notice_reads', idField: 'id', jwtToken: jwtToken);
+
+    // Pull audit log.
+    await _pullEntityRecords(entityType: 'audit_log', localTableName: 'audit_log', idField: 'id', jwtToken: jwtToken);
   }
 
   Future<void> _pullEntityRecords({
@@ -741,120 +757,50 @@ class SyncEngine {
     });
 
     return remote;
-  }
-
-  /// Translates remote PostgreSQL snake_case columns back into local SQLite camelCase fields.
+  }  /// Translates remote PostgreSQL snake_case columns back into local SQLite camelCase fields.
+  /// Generic conversion handles all entity types automatically.
   Map<String, dynamic> _mapRemoteToLocal(
     String table,
     Map<String, dynamic> remote,
   ) {
     final map = <String, dynamic>{};
 
-    if (table == 'students') {
-      if (remote['id'] != null) {
-        map['id'] = remote['id'];
+    remote.forEach((key, value) {
+      if (value == null) return;
+
+      // Skip organisation_id (multi-tenant, not used locally)
+      if (key == 'organisation_id') return;
+
+      // Convert snake_case to camelCase
+      final camelKey = key.replaceAllMapped(
+        RegExp(r'_([a-z])'),
+        (match) => match.group(1)!.toUpperCase(),
+      );
+
+      // Handle boolean fields (is_active → isActive = 1/0)
+      if (key == 'is_active') {
+        map['isActive'] = (value == true) ? 1 : 0;
+        return;
       }
 
-      if (remote['name'] != null) {
-        map['name'] = remote['name'];
+      if (key == 'is_published') {
+        map['isPublished'] = (value == true) ? 1 : 0;
+        return;
       }
 
-      if (remote['father_name'] != null) {
-        map['fatherName'] = remote['father_name'];
+      if (key == 'is_absent') {
+        map['isAbsent'] = (value == true) ? 1 : 0;
+        return;
       }
 
-      if (remote['mother_name'] != null) {
-        map['motherName'] = remote['mother_name'];
+      // Handle numeric fields that need toDouble()
+      if (value is num && (key.contains('amount') || key.contains('fee') || key.contains('rate') || key.contains('hours') || key.contains('marks'))) {
+        map[camelKey] = value.toDouble();
+        return;
       }
 
-      if (remote['board'] != null) {
-        map['board'] = remote['board'];
-      }
-
-      if (remote['student_class'] != null) {
-        map['studentClass'] =
-            remote['student_class'];
-      }
-
-      if (remote['roll_no'] != null) {
-        map['rollNo'] = remote['roll_no'];
-      }
-
-      if (remote['mobile'] != null) {
-        map['mobile'] = remote['mobile'];
-      }
-
-      if (remote['fee_status'] != null) {
-        map['feeStatus'] =
-            remote['fee_status'];
-      }
-
-      if (remote['is_active'] != null) {
-        map['isActive'] =
-            (remote['is_active'] == true) ? 1 : 0;
-      }
-
-      if (remote['created_at'] != null) {
-        map['createdAt'] =
-            remote['created_at'];
-      }
-
-      if (remote['updated_at'] != null) {
-        map['updatedAt'] =
-            remote['updated_at'];
-      }
-
-      if (remote['deleted_at'] != null) {
-        map['deletedAt'] =
-            remote['deleted_at'];
-      }
-    } else if (table == 'teachers') {
-      if (remote['id'] != null) {
-        map['id'] = remote['id'];
-      }
-
-      if (remote['name'] != null) {
-        map['name'] = remote['name'];
-      }
-
-      if (remote['mobile'] != null) {
-        map['mobile'] = remote['mobile'];
-      }
-
-      if (remote['subject'] != null) {
-        map['subject'] = remote['subject'];
-      }
-
-      if (remote['pay_per_hour'] != null) {
-        map['payPerHour'] =
-            (remote['pay_per_hour'] as num).toDouble();
-      }
-
-      if (remote['joining_date'] != null) {
-        map['joiningDate'] =
-            remote['joining_date'];
-      }
-
-      if (remote['is_active'] != null) {
-        map['isActive'] =
-            (remote['is_active'] == true) ? 1 : 0;
-      }
-
-      if (remote['created_at'] != null) {
-        map['createdAt'] =
-            remote['created_at'];
-      }
-
-      if (remote['updated_at'] != null) {
-        map['updatedAt'] =
-            remote['updated_at'];
-      }
-
-      if (remote['deleted_at'] != null) {
-        map['deletedAt'] =
-            remote['deleted_at'];
-      }
-    }
+      map[camelKey] = value;
+    });
 
     return map;
   }
@@ -881,41 +827,141 @@ class SyncEngine {
     }
   }
 
+  /// Generic queue registration method for any entity type.
+  Future<void> _registerEntityChange({
+    required String entityType,
+    required String localId,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) async {
+    await _queueRepo.addToQueue(
+      entityType: entityType,
+      localId: localId,
+      operation: operation,
+      payload: payload,
+    );
+    await _updatePendingCount();
+    syncAll();
+  }
+
   /// Queues a student change and triggers background sync.
   Future<void> registerStudentChange({
     required int studentId,
     required String operation,
     required Map<String, dynamic> payload,
-  }) async {
-    await _queueRepo.addToQueue(
-      entityType: 'students',
-      localId: studentId.toString(),
-      operation: operation,
-      payload: payload,
-    );
-
-    await _updatePendingCount();
-
-    syncAll();
-  }
+  }) => _registerEntityChange(entityType: 'students', localId: studentId.toString(), operation: operation, payload: payload);
 
   /// Queues a teacher change and triggers background sync.
   Future<void> registerTeacherChange({
     required int teacherId,
     required String operation,
     required Map<String, dynamic> payload,
-  }) async {
-    await _queueRepo.addToQueue(
-      entityType: 'teachers',
-      localId: teacherId.toString(),
-      operation: operation,
-      payload: payload,
-    );
+  }) => _registerEntityChange(entityType: 'teachers', localId: teacherId.toString(), operation: operation, payload: payload);
 
-    await _updatePendingCount();
+  /// Queues a fee change and triggers background sync.
+  Future<void> registerFeeChange({
+    required int feeId,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) => _registerEntityChange(entityType: 'fees', localId: feeId.toString(), operation: operation, payload: payload);
 
-    syncAll();
-  }
+  /// Queues a fee payment change.
+  Future<void> registerFeePaymentChange({
+    required int paymentId,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) => _registerEntityChange(entityType: 'fee_payments', localId: paymentId.toString(), operation: operation, payload: payload);
+
+  /// Queues a student attendance change.
+  Future<void> registerStudentAttendanceChange({
+    required int attendanceId,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) => _registerEntityChange(entityType: 'student_attendance', localId: attendanceId.toString(), operation: operation, payload: payload);
+
+  /// Queues a teacher attendance change.
+  Future<void> registerTeacherAttendanceChange({
+    required int attendanceId,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) => _registerEntityChange(entityType: 'teacher_attendance', localId: attendanceId.toString(), operation: operation, payload: payload);
+
+  /// Queues a teacher payment (salary) change.
+  Future<void> registerTeacherPaymentChange({
+    required int paymentId,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) => _registerEntityChange(entityType: 'teacher_payments', localId: paymentId.toString(), operation: operation, payload: payload);
+
+  /// Queues a test change.
+  Future<void> registerTestChange({
+    required int testId,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) => _registerEntityChange(entityType: 'tests', localId: testId.toString(), operation: operation, payload: payload);
+
+  /// Queues a test result change.
+  Future<void> registerTestResultChange({
+    required int resultId,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) => _registerEntityChange(entityType: 'test_results', localId: resultId.toString(), operation: operation, payload: payload);
+
+  /// Queues a daily class record change.
+  Future<void> registerDailyClassRecordChange({
+    required int recordId,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) => _registerEntityChange(entityType: 'daily_class_records', localId: recordId.toString(), operation: operation, payload: payload);
+
+  /// Queues a timetable entry change.
+  Future<void> registerTimetableChange({
+    required int entryId,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) => _registerEntityChange(entityType: 'timetable_entries', localId: entryId.toString(), operation: operation, payload: payload);
+
+  /// Queues a notice change.
+  Future<void> registerNoticeChange({
+    required int noticeId,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) => _registerEntityChange(entityType: 'notices', localId: noticeId.toString(), operation: operation, payload: payload);
+
+  /// Queues an audit log entry for sync.
+  Future<void> registerAuditLogChange({
+    required String entityId,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) => _registerEntityChange(entityType: 'audit_log', localId: entityId, operation: operation, payload: payload);
+
+  /// Queues a fee installment change.
+  Future<void> registerFeeInstallmentChange({
+    required int installmentId,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) => _registerEntityChange(entityType: 'fee_installments', localId: installmentId.toString(), operation: operation, payload: payload);
+
+  /// Queues a teacher pay rate history change.
+  Future<void> registerTeacherPayRateChange({
+    required int recordId,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) => _registerEntityChange(entityType: 'teacher_pay_rate_history', localId: recordId.toString(), operation: operation, payload: payload);
+
+  /// Queues a test subject change.
+  Future<void> registerTestSubjectChange({
+    required int subjectId,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) => _registerEntityChange(entityType: 'test_subjects', localId: subjectId.toString(), operation: operation, payload: payload);
+
+  /// Queues a notice read receipt change.
+  Future<void> registerNoticeReadChange({
+    required int readId,
+    required String operation,
+    required Map<String, dynamic> payload,
+  }) => _registerEntityChange(entityType: 'notice_reads', localId: readId.toString(), operation: operation, payload: payload);
 
   Future<void> _updatePendingCount() async {
     final count = await _queueRepo.getPendingCount();

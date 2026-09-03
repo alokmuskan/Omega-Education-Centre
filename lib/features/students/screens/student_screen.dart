@@ -9,6 +9,7 @@ import '../widgets/class_filter.dart';
 import '../widgets/search_bar.dart';
 import '../widgets/student_card.dart';
 import 'add_student_screen.dart';
+import 'csv_import/csv_import_screen.dart';
 import 'student_details_screen.dart';
 
 class StudentScreen extends StatefulWidget {
@@ -86,6 +87,13 @@ class _StudentScreenState extends State<StudentScreen> {
       appBar: AppBar(
         title: const Text('Students'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.upload_file),
+            tooltip: 'Import CSV',
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const CsvImportScreen()));
+            },
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Center(

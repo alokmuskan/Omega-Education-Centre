@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/database/database_helper.dart';
+import '../../../shared/services/sync_engine.dart';
 import '../models/student_test_summary_model.dart';
 import '../models/test_result_model.dart';
 
@@ -62,6 +63,15 @@ class TestResultRepository {
         }
       }
     });
+
+    // Sync each result to cloud
+    for (final item in results) {
+      SyncEngine.instance.registerTestResultChange(
+        resultId: item.id ?? 0,
+        operation: 'CREATE',
+        payload: item.toMap(),
+      );
+    }
   }
 
   // ──────────────────────────────────────────────────────────────────────

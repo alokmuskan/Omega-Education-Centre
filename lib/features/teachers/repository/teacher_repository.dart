@@ -2,6 +2,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/database/database_helper.dart';
 import '../../../shared/constants/app_constants.dart';
+import '../../../shared/services/audit_service.dart';
 import '../../../shared/services/sync_engine.dart';
 import '../../../shared/utils/password_util.dart';
 import '../models/teacher_model.dart';
@@ -98,6 +99,14 @@ class TeacherRepository {
       payload: createdTeacher.toMap(),
     );
 
+    // Audit log
+    await AuditService.instance.logAction(
+      action: AuditService.actionTeacherCreate,
+      entityType: 'teachers',
+      entityId: id.toString(),
+      newValue: teacher.toMap(),
+    );
+
     return id;
   }
 
@@ -166,6 +175,15 @@ class TeacherRepository {
           teacherId: teacher.id!,
           operation: 'UPDATE',
           payload: teacher.toMap(),
+        );
+
+        // Audit log
+        await AuditService.instance.logAction(
+          action: AuditService.actionTeacherUpdate,
+          entityType: 'teachers',
+          entityId: teacher.id.toString(),
+          oldValue: existingMaps.isNotEmpty ? Map<String, dynamic>.from(existingMaps.first) : null,
+          newValue: teacher.toMap(),
         );
       }
 

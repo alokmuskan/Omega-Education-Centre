@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../features/authentication/login/login_screen.dart';
 import '../features/authentication/repository/auth_repository.dart';
+import '../features/onboarding/screens/onboarding_wizard_screen.dart';
 import '../shared/config/backend_config.dart';
 import '../shared/services/sync_engine.dart';
 import '../shared/themes/app_theme.dart';
@@ -155,6 +156,12 @@ class _AppStartupWrapperState extends State<AppStartupWrapper> with WidgetsBindi
 
   Future<Widget> _restoreSession() async {
     try {
+      // Check if onboarding is complete (first-run wizard)
+      final onboardingComplete = await OnboardingWizardScreen.isOnboardingComplete();
+      if (!onboardingComplete) {
+        return const OnboardingWizardScreen();
+      }
+
       await BackendConfig.loadSettingsFromDb();
       final authRepository = AuthRepository();
       final targetScreen = await authRepository.restorePersistedSession();

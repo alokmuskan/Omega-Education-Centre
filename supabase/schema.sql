@@ -324,3 +324,41 @@ CREATE TABLE IF NOT EXISTS devices (
 );
 
 CREATE INDEX idx_devices_user ON devices (user_id);
+
+-- ── 21. AUDIT LOG (APPEND-ONLY TRANSACTION TRAIL) ─────────────────────────────
+CREATE TABLE IF NOT EXISTS audit_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organisation_id UUID NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
+    action VARCHAR(64) NOT NULL, -- e.g. FEE_PAYMENT, SALARY_PAYMENT, STUDENT_CREATE, STUDENT_DELETE
+    entity_type VARCHAR(64) NOT NULL, -- e.g. fee_payments, teacher_payments, students, teachers, settings
+    entity_id VARCHAR(128), -- UUID or local integer ID of the affected record
+    actor_username VARCHAR(100) NOT NULL, -- Username of the user who performed the action
+    actor_role VARCHAR(32) NOT NULL, -- Admin, Teacher, Student
+    old_value JSONB, -- Previous state (for updates/deletes)
+    new_value JSONB, -- New state (for creates/updates)
+    device_id VARCHAR(255), -- Device identifier if available
+    ip_address VARCHAR(64), -- Client IP if available
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Index for fast filtering by date range and entity
+CREATE INDEX idx_audit_log_org_date ON audit_log (organisation_id, created_at DESC);
+CREATE INDEX idx_audit_log_entity ON audit_log (organisation_id, entity_type, entity_id);
+CREATE INDEX idx_audit_log_action ON audit_log (organisation_id, action);
+
+-- ── 22. PARENT ACCOUNTS ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS parent_accounts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organisation_id UUID NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
+    student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    mobile VARCHAR(15) NOT NULL,
+    name VARCHAR(255),
+    password_hash VARCHAR(255) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    version INT NOT NULL DEFAULT 1,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (organisation_id, mobile)
+);
+
+CREATE INDEX idx_parent_accounts_mobile ON parent_accounts (mobile);

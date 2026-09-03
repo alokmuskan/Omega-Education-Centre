@@ -30,6 +30,7 @@ import '../../shared/utils/encryption_key_manager.dart';
 ///   v12 — creates timetable_entries (TABLE 15) and notices (TABLE 16) for Phase 8 Timetable & Notices module
 ///   v13 — adds periodNumber to timetable_entries, targetBoard & isPublished to notices, and creates notice_reads (TABLE 17)
 ///   v14 — extends fee_payments table with receiptNo & createdAt for Phase 10 Fee Management
+///   v19 — creates audit_log table for append-only financial transaction trail
 class DatabaseHelper {
   DatabaseHelper._privateConstructor();
 
@@ -67,7 +68,7 @@ class DatabaseHelper {
         print('[DB] Opening encrypted database on ${Platform.operatingSystem}');
       }
       try {
-        db = await sqlcipher.openDatabase(path, version: 18, password: key, onCreate: _onCreate, onUpgrade: _onUpgrade);
+        db = await sqlcipher.openDatabase(path, version: 19, password: key, onCreate: _onCreate, onUpgrade: _onUpgrade);
       } catch (e) {
         // Existing DB might be unencrypted — migrate it.
         if (kDebugMode) {
@@ -81,7 +82,7 @@ class DatabaseHelper {
         // ignore: avoid_print
         print('[DB] Opening database on ${Platform.operatingSystem}');
       }
-      db = await openDatabase(path, version: 18, onCreate: _onCreate, onUpgrade: _onUpgrade);
+      db = await openDatabase(path, version: 19, onCreate: _onCreate, onUpgrade: _onUpgrade);
     }
 
     // Auto-repair notices table columns for any existing database installation
@@ -148,6 +149,7 @@ class DatabaseHelper {
     await _createNoticeReadsTable(db);
     await _createAppSettingsTable(db);
     await _createSyncQueueTable(db);
+    await _createAuditLogTable(db);
   }
 
   // ──────────────────────────────────────────────────────────────────────
@@ -513,6 +515,11 @@ class DatabaseHelper {
         await db.execute('ALTER TABLE users ADD COLUMN syncedAt TEXT');
       } catch (_) {}
     }
+
+    if (oldVersion < 19) {
+      // v18 → v19 migration: create audit_log table for financial transaction trail
+      await _createAuditLogTable(db);
+    }
   }
 
   Future<void> _createSyncQueueTable(Database db) async {
@@ -528,6 +535,28 @@ class DatabaseHelper {
         lastAttempt TEXT,
         syncStatus TEXT NOT NULL DEFAULT 'PENDING',
         errorMessage TEXT
+      )
+    ''');
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // TABLE 21 — audit_log (append-only transaction trail)
+  // ──────────────────────────────────────────────────────────────────────
+
+  Future<void> _createAuditLogTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS audit_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        action TEXT NOT NULL,
+        entityType TEXT NOT NULL,
+        entityId TEXT,
+        actorUsername TEXT NOT NULL,
+        actorRole TEXT NOT NULL,
+        oldValueJson TEXT,
+        newValueJson TEXT,
+        deviceId TEXT,
+        ipAddress TEXT,
+        createdAt TEXT NOT NULL
       )
     ''');
   }

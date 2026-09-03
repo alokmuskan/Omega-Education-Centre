@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/database/database_helper.dart';
+import '../../../shared/services/sync_engine.dart';
 import '../../../shared/utils/attendance_date_validator.dart';
 import '../models/attendance_summary_model.dart';
 import '../models/teacher_attendance_model.dart';
@@ -44,6 +45,15 @@ class TeacherAttendanceRepository {
         );
       }
     });
+
+    // Sync each record to cloud
+    for (final item in records) {
+      SyncEngine.instance.registerTeacherAttendanceChange(
+        attendanceId: item.id ?? 0,
+        operation: 'CREATE',
+        payload: item.toMap(),
+      );
+    }
   }
 
   // ──────────────────────────────────────────────────────────────────────

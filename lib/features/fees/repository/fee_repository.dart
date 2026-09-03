@@ -1,6 +1,8 @@
 import 'package:intl/intl.dart';
 
 import '../../../core/database/database_helper.dart';
+import '../../../shared/services/audit_service.dart';
+import '../../../shared/services/sync_engine.dart';
 import '../../students/models/student_model.dart';
 import '../models/fee_installment_model.dart';
 import '../models/fee_model.dart';
@@ -128,6 +130,7 @@ class FeeRepository {
 
     final db = await _db.database;
     int paymentId = -1;
+    String receiptNo = '';
 
     await db.transaction((txn) async {
       // 1. Get Fee Plan
@@ -166,7 +169,7 @@ class FeeRepository {
       // 3. Generate Receipt Number if empty
       final countRes = await txn.rawQuery('SELECT COUNT(*) as cnt FROM fee_payments');
       final cnt = (countRes.first['cnt'] as int) + 1;
-      final receiptNo = payment.receiptNo ?? 'REC-${DateFormat('yyyyMMdd').format(DateTime.now())}-${cnt.toString().padLeft(4, '0')}';
+      receiptNo = payment.receiptNo ?? 'REC-${DateFormat('yyyyMMdd').format(DateTime.now())}-${cnt.toString().padLeft(4, '0')}';
 
       final nowIso = DateTime.now().toIso8601String();
       final pMap = payment.toMap();
@@ -179,6 +182,33 @@ class FeeRepository {
       // 4. Update student fee status in database
       await _updateStudentFeeStatusTxn(txn, payment.studentId);
     });
+
+    // 5. Audit log
+    await AuditService.instance.logAction(
+      action: AuditService.actionFeePayment,
+      entityType: 'fee_payments',
+      entityId: paymentId.toString(),
+      newValue: {
+        'studentId': payment.studentId,
+        'amount': payment.amount,
+        'paymentDate': payment.paymentDate,
+        'receiptNo': receiptNo,
+      },
+    );
+
+    // 6. Sync to cloud
+    SyncEngine.instance.registerFeePaymentChange(
+      paymentId: paymentId,
+      operation: 'CREATE',
+      payload: {
+        'id': paymentId,
+        'studentId': payment.studentId,
+        'amount': payment.amount,
+        'paymentDate': payment.paymentDate,
+        'receiptNo': receiptNo,
+        'paymentMethod': payment.paymentMode,
+      },
+    );
 
     return paymentId;
   }

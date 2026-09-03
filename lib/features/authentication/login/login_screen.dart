@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../shared/utils/login_attempt_tracker.dart';
 import '../../backup/screens/recovery_screen.dart';
+import '../../parent_portal/screens/parent_login_screen.dart';
 import '../../dashboard/dashboard_screen.dart';
 import '../../dashboard/student_dashboard_screen.dart';
 import '../../dashboard/teacher_dashboard_screen.dart';
@@ -260,8 +261,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (value == null || value.trim().isEmpty) {
                           return "Please enter password";
                         }
-                        if (value.length < 4) {
-                          return "Password must be at least 4 characters";
+                        if (value.length < 8) {
+                          return "Password must be at least 8 characters";
                         }
                         return null;
                       },
@@ -308,6 +309,26 @@ class _LoginScreenState extends State<LoginScreen> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Color(0xFF0D47A1),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ParentLoginScreen()),
+                        );
+                      },
+                      child: const Text(
+                        "Parent? Login to View Your Child's Progress",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF1B5E20),
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),

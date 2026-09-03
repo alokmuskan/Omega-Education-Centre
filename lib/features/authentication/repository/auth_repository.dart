@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/database/database_helper.dart';
 import '../../../shared/constants/app_constants.dart';
+import '../../../shared/services/audit_service.dart';
 import '../../../shared/services/supabase_auth_service.dart';
 import '../../../shared/utils/app_session.dart';
 import '../../../shared/utils/login_attempt_tracker.dart';
@@ -895,6 +896,14 @@ class AuthRepository {
       where: 'id = ?',
       whereArgs: [userMap['id']],
     );
+
+    // Audit log
+    await AuditService.instance.logAction(
+      action: AuditService.actionPasswordChange,
+      entityType: 'users',
+      entityId: userMap['id'].toString(),
+      newValue: {'username': cleanUser, 'changedBy': 'self'},
+    );
   }
 
   // ===========================================================================
@@ -998,6 +1007,14 @@ class AuthRepository {
         referenceId: referenceId,
       );
     }
+
+    // Audit log
+    await AuditService.instance.logAction(
+      action: AuditService.actionPasswordReset,
+      entityType: 'users',
+      entityId: userMaps.isNotEmpty ? userMaps.first['id'].toString() : null,
+      newValue: {'targetUsername': cleanUser, 'changedBy': 'admin'},
+    );
   }
 
   // ===========================================================================
