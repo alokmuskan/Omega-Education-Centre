@@ -19,16 +19,5 @@ INSERT INTO admin_accounts (username, displayName, passwordHash)
 VALUES ('alokraj1319@gmail.com', 'Alok', 'Alok@2006')
 ON CONFLICT (username) DO NOTHING;
 
--- Also create a backup 'admin' user (for backward compatibility)
-SELECT signup(
-  'admin@omega.internal',
-  'admin123',
-  '{"role": "admin", "display_name": "Administrator"}'::jsonb
-);
-
-INSERT INTO admin_accounts (username, displayName, passwordHash)
-VALUES ('admin', 'Administrator', 'admin123')
-ON CONFLICT (username) DO NOTHING;
-
 -- Verify it worked
 SELECT id, username, displayName, isActive FROM admin_accounts;

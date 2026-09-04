@@ -131,8 +131,7 @@ class AuthRepository {
     // There is no local password fallback.
     // -------------------------------------------------------------------------
 
-    if (cleanUser.toLowerCase() == 'admin' ||
-        await _isAdminUsername(cleanUser)) {
+    if (await _isAdminUsername(cleanUser)) {
       if (kDebugMode) {
         // ignore: avoid_print
         print('[AUTH-TRACE-ADMIN-01] Admin login started for username=$cleanUser');
@@ -839,7 +838,7 @@ class AuthRepository {
     // the local and central credentials inconsistent.
     // -------------------------------------------------------------------------
 
-    if (cleanUser.toLowerCase() == 'admin') {
+    if (await _isAdminUsername(cleanUser)) {
       throw Exception(
         'Admin password is managed by Supabase Auth. '
         'Do not change the Admin password through the local account system.',
@@ -963,7 +962,7 @@ class AuthRepository {
     // Admin account cannot be reset through local SQLite.
     // -------------------------------------------------------------------------
 
-    if (cleanUser.toLowerCase() == 'admin') {
+    if (await _isAdminUsername(cleanUser)) {
       throw Exception(
         'Admin password is managed by Supabase Auth. '
         'Use the Supabase Admin password management flow.',
@@ -1049,7 +1048,7 @@ class AuthRepository {
         targetUsername.trim();
 
     // Admin status is controlled by Supabase Auth.
-    if (cleanUser.toLowerCase() == 'admin') {
+    if (await _isAdminUsername(cleanUser)) {
       throw Exception(
         'Admin account status is managed by Supabase Auth.',
       );
@@ -1126,7 +1125,7 @@ class AuthRepository {
     final cleanUser =
         username.trim();
 
-    if (cleanUser.toLowerCase() == 'admin') {
+    if (await _isAdminUsername(cleanUser)) {
       throw Exception(
         'The Admin account is managed by Supabase Auth and cannot be '
         'created through the local account system.',
@@ -1272,7 +1271,7 @@ class AuthRepository {
       // Do not attempt to validate Admin using SQLite password hashes.
       // -----------------------------------------------------------------------
 
-      if (cleanUser.toLowerCase() == 'admin' ||
+      if (await _isAdminUsername(cleanUser) ||
           role == AppConstants.roleAdmin) {
         final token =
             await SupabaseAuthService.instance
@@ -1497,11 +1496,11 @@ class AuthRepository {
       );
     }
 
-    // Admin login via Supabase Auth
-    if (cleanUser.toLowerCase() == 'admin' ||
-        cleanUser.toLowerCase() == 'alok') {
+    // All web authentication goes through Supabase Auth.
+    // signInUser checks admin_accounts, teachers, and students tables.
+    {
       final authenticated =
-          await SupabaseAuthService.instance.signInAdmin(cleanPass, username: cleanUser);
+          await SupabaseAuthService.instance.signInUser(cleanUser, cleanPass);
 
       if (!authenticated) {
         tracker.recordFailedAttempt(cleanUser);
@@ -1511,7 +1510,7 @@ class AuthRepository {
           return AuthResult(
             success: false,
             role: '',
-            message: 'Invalid Admin password. Account locked for $lockout minute${lockout == 1 ? '' : 's'}.',
+            message: 'Invalid password. Account locked for $lockout minute${lockout == 1 ? '' : 's'}.',
           );
         }
         return AuthResult(
@@ -1527,43 +1526,9 @@ class AuthRepository {
       return const AuthResult(
         success: true,
         role: AppConstants.roleAdmin,
-        message: 'Admin login successful.',
+        message: 'Login successful.',
       );
     }
-
-    // Teacher/Student login via Supabase Auth (auto-provisions if needed)
-    final authenticated =
-        await SupabaseAuthService.instance.signInUser(cleanUser, cleanPass);
-
-    if (!authenticated) {
-      tracker.recordFailedAttempt(cleanUser);
-      final remaining = tracker.getRemainingAttempts(cleanUser);
-      final lockout = tracker.getMinutesUntilUnlock(cleanUser);
-      if (lockout > 0) {
-        return AuthResult(
-          success: false,
-          role: '',
-          message: 'Invalid credentials. Account locked for $lockout minute${lockout == 1 ? '' : 's'}.',
-        );
-      }
-      return AuthResult(
-        success: false,
-        role: '',
-        message: 'Invalid credentials. $remaining attempt${remaining == 1 ? '' : 's'} remaining before lockout.',
-      );
-    }
-
-    tracker.clearAttempts(cleanUser);
-
-    // On web, we don't have local user data to determine role.
-    // Default to Teacher for non-admin web logins (Admin can change later).
-    await AppSession.instance.setAdminSession(username: cleanUser);
-
-    return const AuthResult(
-      success: true,
-      role: AppConstants.roleAdmin,
-      message: 'Login successful.',
-    );
   }
 
   // ===========================================================================
