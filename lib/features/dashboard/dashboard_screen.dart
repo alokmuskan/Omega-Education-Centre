@@ -27,6 +27,8 @@ import 'widgets/dashboard_header.dart';
 import '../analytics/screens/analytics_dashboard_screen.dart';
 import '../academic_calendar/screens/academic_calendar_screen.dart';
 import '../batches/screens/batch_management_screen.dart';
+import '../library/screens/library_screen.dart';
+import '../transport/screens/transport_management_screen.dart';
 import '../branches/screens/branch_management_screen.dart';
 import '../../shared/screens/license_screen.dart';
 import '../audit/screens/audit_log_screen.dart';
@@ -998,6 +1000,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       icon: Icons.analytics,
                                       color: Colors.deepPurple,
                                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsDashboardScreen())).then((_) => _loadDashboardData(silent: true)),
+                                    ),
+                                    MenuCard(
+                                      title: "Library",
+                                      icon: Icons.menu_book,
+                                      color: Colors.brown,
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LibraryScreen())).then((_) => _loadDashboardData(silent: true)),
+                                    ),
+                                    MenuCard(
+                                      title: "Transport",
+                                      icon: Icons.directions_bus,
+                                      color: Colors.green,
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TransportManagementScreen())).then((_) => _loadDashboardData(silent: true)),
                                     ),
                                   ],
                                 ),

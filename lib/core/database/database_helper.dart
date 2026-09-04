@@ -71,7 +71,7 @@ class DatabaseHelper {
         print('[DB] Opening encrypted database on ${Platform.operatingSystem}');
       }
       try {
-        db = await sqlcipher.openDatabase(path, version: 23, password: key, onCreate: _onCreate, onUpgrade: _onUpgrade);
+        db = await sqlcipher.openDatabase(path, version: 25, password: key, onCreate: _onCreate, onUpgrade: _onUpgrade);
       } catch (e) {
         // Existing DB might be unencrypted — migrate it.
         if (kDebugMode) {
@@ -85,7 +85,7 @@ class DatabaseHelper {
         // ignore: avoid_print
         print('[DB] Opening database on ${Platform.operatingSystem}');
       }
-      db = await openDatabase(path, version: 23, onCreate: _onCreate, onUpgrade: _onUpgrade);
+      db = await openDatabase(path, version: 25, onCreate: _onCreate, onUpgrade: _onUpgrade);
     }
 
     // Auto-repair notices table columns for any existing database installation
@@ -555,6 +555,19 @@ class DatabaseHelper {
       // v22 → v23 migration: create branches table
       await _createBranchesTable(db);
     }
+
+    if (oldVersion < 24) {
+      // v23 → v24 migration: create library tables (books + book_issues)
+      await _createBooksTable(db);
+      await _createBookIssuesTable(db);
+    }
+
+    if (oldVersion < 25) {
+      // v24 → v25 migration: create transport tables (vehicles, routes, student_transport)
+      await _createVehiclesTable(db);
+      await _createRoutesTable(db);
+      await _createStudentTransportTable(db);
+    }
   }
 
   Future<void> _createSyncQueueTable(Database db) async {
@@ -772,6 +785,129 @@ class DatabaseHelper {
         updatedAt TEXT
       )
     ''');
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // TABLE 25 — books (library inventory)
+  // ──────────────────────────────────────────────────────────────────────
+
+  Future<void> _createBooksTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS books (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        author TEXT,
+        isbn TEXT,
+        category TEXT,
+        totalCopies INTEGER NOT NULL DEFAULT 1,
+        availableCopies INTEGER NOT NULL DEFAULT 1,
+        shelfLocation TEXT,
+        description TEXT,
+        isActive INTEGER NOT NULL DEFAULT 1,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_books_isbn ON books(isbn)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_books_category ON books(category)');
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // TABLE 26 — book_issues (issue/return tracking)
+  // ──────────────────────────────────────────────────────────────────────
+
+  Future<void> _createBookIssuesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS book_issues (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        bookId INTEGER NOT NULL,
+        studentId INTEGER NOT NULL,
+        issueDate TEXT NOT NULL,
+        dueDate TEXT NOT NULL,
+        returnDate TEXT,
+        fineAmount REAL NOT NULL DEFAULT 0,
+        finePerDay REAL NOT NULL DEFAULT 1,
+        status TEXT NOT NULL DEFAULT 'Issued',
+        remarks TEXT,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT,
+        FOREIGN KEY (bookId) REFERENCES books(id),
+        FOREIGN KEY (studentId) REFERENCES students(id)
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_book_issues_status ON book_issues(status)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_book_issues_student ON book_issues(studentId)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_book_issues_book ON book_issues(bookId)');
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // TABLE 27 — vehicles (transport)
+  // ──────────────────────────────────────────────────────────────────────
+
+  Future<void> _createVehiclesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS vehicles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        vehicleNumber TEXT NOT NULL,
+        vehicleType TEXT NOT NULL DEFAULT 'Bus',
+        capacity INTEGER NOT NULL DEFAULT 40,
+        driverName TEXT,
+        driverPhone TEXT,
+        isActive INTEGER NOT NULL DEFAULT 1,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_vehicles_number ON vehicles(vehicleNumber)');
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // TABLE 28 — routes (transport routes)
+  // ──────────────────────────────────────────────────────────────────────
+
+  Future<void> _createRoutesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS transport_routes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        routeName TEXT NOT NULL,
+        vehicleId INTEGER,
+        startPoint TEXT,
+        endPoint TEXT,
+        stops TEXT,
+        departureTime TEXT,
+        arrivalTime TEXT,
+        fare REAL NOT NULL DEFAULT 0,
+        isActive INTEGER NOT NULL DEFAULT 1,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT,
+        FOREIGN KEY (vehicleId) REFERENCES vehicles(id)
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_routes_vehicle ON transport_routes(vehicleId)');
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // TABLE 29 — student_transport (student-route assignment)
+  // ──────────────────────────────────────────────────────────────────────
+
+  Future<void> _createStudentTransportTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS student_transport (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        studentId INTEGER NOT NULL,
+        routeId INTEGER NOT NULL,
+        stopName TEXT,
+        pickupOrDrop TEXT NOT NULL DEFAULT 'Both',
+        monthlyFee REAL NOT NULL DEFAULT 0,
+        isActive INTEGER NOT NULL DEFAULT 1,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT,
+        FOREIGN KEY (studentId) REFERENCES students(id),
+        FOREIGN KEY (routeId) REFERENCES transport_routes(id)
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_student_transport_student ON student_transport(studentId)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_student_transport_route ON student_transport(routeId)');
   }
 
   // ──────────────────────────────────────────────────────────────────────

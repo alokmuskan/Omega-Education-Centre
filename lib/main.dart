@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -12,9 +13,13 @@ import 'shared/services/biometric_service.dart';
 import 'shared/services/license_service.dart';
 import 'shared/services/localization_service.dart';
 import 'shared/services/theme_service.dart';
+import 'shared/services/crash_reporting_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ── Step 0: Initialize Crash Reporting (FIRST — catches all errors) ─
+  await CrashReportingService.instance.init();
 
   // ── Step 1: Initialize Firebase (with graceful fallback) ────────────
   //
@@ -107,5 +112,9 @@ void main() async {
   // ── Step 9: Run automatic daily backup asynchronously on startup ──────
   BackupService().runAutomaticDailyBackup();
 
-  runApp(const App());
+  runApp(
+    const ProviderScope(
+      child: App(),
+    ),
+  );
 }
