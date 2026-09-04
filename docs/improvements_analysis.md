@@ -6,16 +6,16 @@
 
 ## Audit Summary
 
-| Category | Total Items | P0 (Critical) | P1 (High) | P2 (Medium) | P3 (Low) |
+| Category | Total Items | P0 (Critical) ✅ | P1 (High) ✅ | P2 (Medium) | P3 (Low) |
 |----------|-------------|----------------|-----------|-------------|----------|
-| Platform & Infrastructure | 6 | 2 | 1 | 1 | 2 |
-| Security & Compliance | 7 | 3 | 2 | 1 | 1 |
-| Sync & Data | 3 | 1 | 2 | 0 | 0 |
-| Features (Client-Requested) | 11 | 0 | 4 | 5 | 2 |
+| Platform & Infrastructure | 6 | 2 ✅ | 1 ✅ | 1 | 2 |
+| Security & Compliance | 7 | 3 ✅ | 2 ✅ | 1 | 1 |
+| Sync & Data | 3 | 1 ✅ | 2 ✅ | 0 | 0 |
+| Features (Client-Requested) | 11 | 0 | 4 ✅ | 5 | 2 |
 | UI/UX & Polish | 6 | 0 | 0 | 4 | 2 |
 | Architecture & Code Quality | 4 | 0 | 0 | 0 | 4 |
 | Testing & QA | 3 | 0 | 0 | 1 | 2 |
-| **Totals** | **40** | **6** | **9** | **12** | **13** |
+| **Totals** | **40** | **6/6 ✅** | **9/9 ✅** | **12** | **13** |
 
 ---
 
@@ -207,22 +207,31 @@ The sync engine only syncs 3 tables: `students`, `teachers`, `users`. The follow
 
 ---
 
-### P1-03: Push Notifications (FCM)
+### P1-03: Push Notifications (FCM) ✅ DONE
 
 **Area:** Features (Client-Requested)
-**File(s):** New service `lib/shared/services/notification_service.dart`
+**File(s):** `lib/shared/services/push_notification_service.dart`, `lib/shared/services/notification_service.dart`, `lib/shared/screens/notification_center_screen.dart`, `lib/features/settings/screens/notification_preferences_screen.dart`, `lib/main.dart`
 
 **Current State:**
-No push notifications. The app has no mechanism to proactively alert users.
+✅ Firebase Cloud Messaging (FCM) integration implemented via `PushNotificationService`.
+✅ In-app notification center with read/unread status, swipe-to-delete, type-based icons.
+✅ Notification preferences screen (per user, per type: fee reminders, exam alerts, attendance, general notices).
+✅ FCM token management with automatic refresh and local persistence.
+✅ Background message handler for notifications received when app is in background/terminated.
+✅ Graceful degradation — app works without Firebase (push disabled, in-app notifications still work).
+✅ Topic subscription support for class-specific and role-based notifications.
+✅ Push status indicator in notification center.
 
-**Impact:** Fee reminders, exam announcements, and urgent notices sit in the app unseen. Clients expect proactive alerts.
+**Remaining:**
+- Server-side notification triggers (Supabase Edge Functions for automated fee reminders, exam alerts).
+- Firebase project setup (`firebase_options.dart`, `google-services.json`, `GoogleService-Info.plist`).
 
-**What to Build:**
-1. Firebase Cloud Messaging (FCM) integration.
-2. Server-side notification triggers (Supabase Edge Functions or Cloud Functions).
-3. Notification types: fee due reminders, exam alerts, urgent notices, attendance alerts.
-4. In-app notification center with read/unread status.
-5. Notification preferences (per user, per type).
+**What was Built:**
+1. `PushNotificationService` — FCM initialization, token management, foreground/background message handling, topic subscriptions.
+2. `NotificationService` — In-app notifications with FCM integration, read/unread tracking.
+3. `NotificationCenterScreen` — UI with FCM status badge, notification list, swipe-to-delete.
+4. `NotificationPreferencesScreen` — Per-user, per-type notification preferences.
+5. `main.dart` — Firebase initialization with graceful fallback, background handler registration.
 
 ---
 
@@ -841,7 +850,7 @@ Boards, classes, and subjects are hardcoded. There's no way for an admin to add 
 | `lib/features/library/` | Library management |
 | `lib/features/transport/` | Transport tracking |
 | `lib/features/payments/` | Online payment gateway |
-| `lib/shared/services/notification_service.dart` | Push notifications |
+| `lib/shared/services/notification_service.dart` | In-app + push notifications |
 | `lib/shared/services/messaging_service.dart` | SMS/WhatsApp |
 | `lib/shared/services/audit_service.dart` | Audit trail |
 | `lib/shared/services/crash_reporting_service.dart` | Crash reporting |

@@ -24,6 +24,7 @@ import '../teachers/screens/teacher_screen.dart';
 import '../tests/repository/test_repository.dart';
 import '../tests/screens/tests_main_screen.dart';
 import 'widgets/dashboard_header.dart';
+import '../analytics/screens/analytics_dashboard_screen.dart';
 import '../audit/screens/audit_log_screen.dart';
 import 'widgets/menu_card.dart';
 import 'widgets/summary_card.dart';
@@ -962,6 +963,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       icon: Icons.history,
                                       color: Colors.teal,
                                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AuditLogScreen())).then((_) => _loadDashboardData(silent: true)),
+                                    ),
+                                    MenuCard(
+                                      title: "Analytics",
+                                      icon: Icons.analytics,
+                                      color: Colors.deepPurple,
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsDashboardScreen())).then((_) => _loadDashboardData(silent: true)),
                                     ),
                                   ],
                                 ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/screens/notification_center_screen.dart';
+import '../../../shared/services/notification_service.dart';
 import '../../../shared/utils/app_session.dart';
 import '../../../shared/widgets/sync_status_widget.dart';
 import '../../authentication/login/login_screen.dart';
@@ -95,6 +97,44 @@ class DashboardHeader extends StatelessWidget {
                 const SyncStatusWidget(),
 
                 const SizedBox(width: 4),
+
+                // Notification Bell
+                StreamBuilder<int>(
+                  stream: Stream.periodic(const Duration(seconds: 30), (_) => NotificationService.instance.unreadCount),
+                  initialData: NotificationService.instance.unreadCount,
+                  builder: (context, snapshot) {
+                    final count = snapshot.data ?? 0;
+                    return IconButton(
+                      icon: Stack(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(38),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.notifications, color: Colors.white, size: 20),
+                          ),
+                          if (count > 0)
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                                child: Text('$count', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                        ],
+                      ),
+                      tooltip: 'Notifications',
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const NotificationCenterScreen()),
+                      ),
+                    );
+                  },
+                ),
 
                 IconButton(
                   icon: Container(
