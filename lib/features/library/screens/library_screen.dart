@@ -443,13 +443,14 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
       builder: (context) => _BookFormSheet(
         book: book,
         onSave: (book) async {
+          final nav = Navigator.of(context);
           if (book.id == null) {
             await _repo.insertBook(book);
           } else {
             await _repo.updateBook(book);
           }
           _loadData();
-          if (mounted) Navigator.pop(context);
+          if (mounted) nav.pop();
         },
       ),
     );
@@ -462,11 +463,13 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
       builder: (context) => _IssueBookFormSheet(
         book: book,
         onIssue: (issue) async {
+          final nav = Navigator.of(context);
+          final messenger = ScaffoldMessenger.of(context);
           await _repo.issueBook(issue);
           _loadData();
-          if (mounted) Navigator.pop(context);
+          if (mounted) nav.pop();
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            messenger.showSnackBar(
               SnackBar(content: Text('Book "${book.title}" issued successfully')),
             );
           }
@@ -500,12 +503,14 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
           ),
           FilledButton(
             onPressed: () async {
+              final nav = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
               final fine = issue.isOverdue ? issue.calculatedFine : 0.0;
               await _repo.returnBook(issue.id!, fine: fine);
               _loadData();
-              if (mounted) Navigator.pop(context);
+              if (mounted) nav.pop();
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text(
                       fine > 0
@@ -536,9 +541,10 @@ class _LibraryScreenState extends State<LibraryScreen> with SingleTickerProvider
           ),
           FilledButton(
             onPressed: () async {
+              final nav = Navigator.of(context);
               await _repo.deleteBook(book.id!);
               _loadData();
-              if (mounted) Navigator.pop(context);
+              if (mounted) nav.pop();
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Delete'),

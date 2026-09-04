@@ -1,10 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omega_education_centre/core/database/database_helper.dart';
 import 'package:omega_education_centre/features/authentication/repository/auth_repository.dart';
-import 'package:omega_education_centre/features/dashboard/dashboard_screen.dart';
 import 'package:omega_education_centre/features/dashboard/student_dashboard_screen.dart';
 import 'package:omega_education_centre/features/dashboard/teacher_dashboard_screen.dart';
-import 'package:omega_education_centre/shared/config/backend_config.dart';
 import 'package:omega_education_centre/shared/constants/app_constants.dart';
 import 'package:omega_education_centre/shared/utils/app_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';

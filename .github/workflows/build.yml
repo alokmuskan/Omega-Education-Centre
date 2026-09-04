@@ -24,7 +24,6 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.12.2"
           channel: stable
 
       - name: Install dependencies
@@ -58,7 +57,6 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.12.2"
           channel: stable
 
       - name: Install dependencies
@@ -82,7 +80,6 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.12.2"
           channel: stable
 
       - name: Enable Developer Mode

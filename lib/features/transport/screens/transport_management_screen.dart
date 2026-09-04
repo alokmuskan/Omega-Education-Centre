@@ -172,13 +172,14 @@ class _TransportManagementScreenState extends State<TransportManagementScreen>
       builder: (context) => _VehicleFormSheet(
         vehicle: vehicle,
         onSave: (v) async {
+          final nav = Navigator.of(context);
           if (v.id == null) {
             await _repo.insertVehicle(v);
           } else {
             await _repo.updateVehicle(v);
           }
           _loadData();
-          if (mounted) Navigator.pop(context);
+          if (mounted) nav.pop();
         },
       ),
     );
@@ -256,13 +257,14 @@ class _TransportManagementScreenState extends State<TransportManagementScreen>
         route: route,
         vehicles: _vehicles,
         onSave: (r) async {
+          final nav = Navigator.of(context);
           if (r.id == null) {
             await _repo.insertRoute(r);
           } else {
             await _repo.updateRoute(r);
           }
           _loadData();
-          if (mounted) Navigator.pop(context);
+          if (mounted) nav.pop();
         },
       ),
     );
@@ -321,9 +323,10 @@ class _TransportManagementScreenState extends State<TransportManagementScreen>
       builder: (context) => _AssignmentFormSheet(
         routes: _routes,
         onAssign: (assignment) async {
+          final nav = Navigator.of(context);
           await _repo.assignStudent(assignment);
           _loadData();
-          if (mounted) Navigator.pop(context);
+          if (mounted) nav.pop();
         },
       ),
     );

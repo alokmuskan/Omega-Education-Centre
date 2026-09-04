@@ -18,10 +18,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
 
   if (kDebugMode) {
-    print('[FCM BACKGROUND] Message received: ${message.messageId}');
-    print('[FCM BACKGROUND] Title: ${message.notification?.title}');
-    print('[FCM BACKGROUND] Body: ${message.notification?.body}');
-    print('[FCM BACKGROUND] Data: ${message.data}');
+    debugPrint('[FCM BACKGROUND] Message received: ${message.messageId}');
+    debugPrint('[FCM BACKGROUND] Title: ${message.notification?.title}');
+    debugPrint('[FCM BACKGROUND] Body: ${message.notification?.body}');
+    debugPrint('[FCM BACKGROUND] Data: ${message.data}');
   }
 
   // Persist the notification so it appears in the in-app notification center.
@@ -78,7 +78,7 @@ class PushNotificationService {
           settings.authorizationStatus == AuthorizationStatus.provisional;
 
       if (kDebugMode) {
-        print('[FCM] Permission status: ${settings.authorizationStatus}');
+        debugPrint('[FCM] Permission status: ${settings.authorizationStatus}');
       }
 
       // Get FCM token.
@@ -86,7 +86,7 @@ class PushNotificationService {
         _currentToken = await _messaging.getToken();
 
         if (kDebugMode && _currentToken != null) {
-          print('[FCM] Token obtained: ${_currentToken!.substring(0, 20)}...');
+          debugPrint('[FCM] Token obtained: ${_currentToken!.substring(0, 20)}...');
         }
 
         // Persist token locally.
@@ -98,7 +98,7 @@ class PushNotificationService {
         // Listen for token refresh.
         _messaging.onTokenRefresh.listen((newToken) {
           if (kDebugMode) {
-            print('[FCM] Token refreshed');
+            debugPrint('[FCM] Token refreshed');
           }
           _currentToken = newToken;
           _saveToken(newToken);
@@ -121,7 +121,7 @@ class PushNotificationService {
       _isInitialized = true;
 
       if (kDebugMode) {
-        print('[FCM] Push notification service initialized');
+        debugPrint('[FCM] Push notification service initialized');
       }
     } catch (e) {
       // Firebase not available — app works without push notifications.
@@ -129,7 +129,7 @@ class PushNotificationService {
       _isInitialized = true;
 
       if (kDebugMode) {
-        print('[FCM] Initialization failed (app works without push): $e');
+        debugPrint('[FCM] Initialization failed (app works without push): $e');
       }
     }
   }
@@ -158,11 +158,11 @@ class PushNotificationService {
       await db.setSetting('fcm_token_updated_at', DateTime.now().toIso8601String());
 
       if (kDebugMode) {
-        print('[FCM] Token persisted to app_settings for server sync');
+        debugPrint('[FCM] Token persisted to app_settings for server sync');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('[FCM] Token sync failed: $e');
+        debugPrint('[FCM] Token sync failed: $e');
       }
     }
   }
@@ -172,9 +172,9 @@ class PushNotificationService {
   /// Handles messages received while the app is in the foreground.
   void _handleForegroundMessage(RemoteMessage message) {
     if (kDebugMode) {
-      print('[FCM FOREGROUND] Title: ${message.notification?.title}');
-      print('[FCM FOREGROUND] Body: ${message.notification?.body}');
-      print('[FCM FOREGROUND] Data: ${message.data}');
+      debugPrint('[FCM FOREGROUND] Title: ${message.notification?.title}');
+      debugPrint('[FCM FOREGROUND] Body: ${message.notification?.body}');
+      debugPrint('[FCM FOREGROUND] Data: ${message.data}');
     }
 
     final notification = message.notification;
@@ -195,7 +195,7 @@ class PushNotificationService {
   /// Handles notification tap (app opens from background/terminated).
   void _handleNotificationTap(RemoteMessage message) {
     if (kDebugMode) {
-      print('[FCM TAP] Navigating based on notification type');
+      debugPrint('[FCM TAP] Navigating based on notification type');
     }
 
     final type = message.data['type'] ?? 'general';
@@ -210,7 +210,7 @@ class PushNotificationService {
     // Navigation will be handled by the app's router when the user
     // taps on the notification. For now, we just log it.
     if (kDebugMode) {
-      print('[FCM NAV] Type: $type, Data: $data');
+      debugPrint('[FCM NAV] Type: $type, Data: $data');
     }
   }
 
@@ -233,7 +233,7 @@ class PushNotificationService {
       );
     } catch (e) {
       if (kDebugMode) {
-        print('[FCM] Failed to persist background notification: $e');
+        debugPrint('[FCM] Failed to persist background notification: $e');
       }
     }
   }
@@ -252,11 +252,11 @@ class PushNotificationService {
     try {
       await _messaging.subscribeToTopic(topic);
       if (kDebugMode) {
-        print('[FCM] Subscribed to topic: $topic');
+        debugPrint('[FCM] Subscribed to topic: $topic');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('[FCM] Failed to subscribe to topic $topic: $e');
+        debugPrint('[FCM] Failed to subscribe to topic $topic: $e');
       }
     }
   }
@@ -267,11 +267,11 @@ class PushNotificationService {
     try {
       await _messaging.unsubscribeFromTopic(topic);
       if (kDebugMode) {
-        print('[FCM] Unsubscribed from topic: $topic');
+        debugPrint('[FCM] Unsubscribed from topic: $topic');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('[FCM] Failed to unsubscribe from topic $topic: $e');
+        debugPrint('[FCM] Failed to unsubscribe from topic $topic: $e');
       }
     }
   }
@@ -290,7 +290,7 @@ class PushNotificationService {
       await prefs.setBool(_fcmEnabledKey, false);
 
       if (kDebugMode) {
-        print('[FCM] Token deleted');
+        debugPrint('[FCM] Token deleted');
       }
     } catch (_) {}
   }
