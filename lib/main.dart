@@ -39,16 +39,23 @@ void main() async {
   // Firebase is required for FCM push notifications.
   // If firebase_options.dart is not configured (no Firebase project),
   // the app still works — push notifications are simply disabled.
-  try {
-    await Firebase.initializeApp();
-    if (kDebugMode) {
-      print('[MAIN] Firebase initialized successfully');
+  // On web, Firebase needs explicit FirebaseOptions — skip if not configured.
+  if (!kIsWeb) {
+    try {
+      await Firebase.initializeApp();
+      if (kDebugMode) {
+        print('[MAIN] Firebase initialized successfully');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('[MAIN] Firebase initialization failed (push notifications disabled): $e');
+      }
+      // App continues without push notifications.
     }
-  } catch (e) {
+  } else {
     if (kDebugMode) {
-      print('[MAIN] Firebase initialization failed (push notifications disabled): $e');
+      print('[MAIN] Firebase skipped on web (no FirebaseOptions configured)');
     }
-    // App continues without push notifications.
   }
 
   // ── Step 2: Register FCM background message handler ─────────────────
@@ -82,7 +89,13 @@ void main() async {
   }
 
   // ── Step 4: Load credentials from .env ───────────────────────────────
-  BackendConfig.loadFromEnv();
+  try {
+    BackendConfig.loadFromEnv();
+  } catch (e) {
+    if (kDebugMode) {
+      print('[MAIN] loadFromEnv failed (app running without env vars): $e');
+    }
+  }
 
   // ── Step 5: Override with SQLite settings if available ────────────────
   //

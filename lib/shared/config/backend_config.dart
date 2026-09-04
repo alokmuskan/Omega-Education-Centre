@@ -47,19 +47,24 @@ class BackendConfig {
   /// Loads credentials from `.env` file (flutter_dotenv).
   ///
   /// This should be called early in `main()` after `dotenv.load()`.
+  /// Safe to call even if dotenv was not loaded (e.g., on web or CI).
   static void loadFromEnv() {
-    final url = dotenv.env['SUPABASE_URL'];
-    final key = dotenv.env['SUPABASE_ANON_KEY'];
-    final code = dotenv.env['ORG_CODE'];
+    try {
+      final url = dotenv.env['SUPABASE_URL'];
+      final key = dotenv.env['SUPABASE_ANON_KEY'];
+      final code = dotenv.env['ORG_CODE'];
 
-    if (url != null && url.trim().isNotEmpty) {
-      supabaseUrl = url.trim();
-    }
-    if (key != null && key.trim().isNotEmpty) {
-      supabaseAnonKey = key.trim();
-    }
-    if (code != null && code.trim().isNotEmpty) {
-      orgCode = code.trim();
+      if (url != null && url.trim().isNotEmpty) {
+        supabaseUrl = url.trim();
+      }
+      if (key != null && key.trim().isNotEmpty) {
+        supabaseAnonKey = key.trim();
+      }
+      if (code != null && code.trim().isNotEmpty) {
+        orgCode = code.trim();
+      }
+    } catch (_) {
+      // dotenv not initialized — app runs without env vars.
     }
   }
 
