@@ -60,7 +60,8 @@ class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
   final _adminPasswordController = TextEditingController();
   final _adminConfirmPasswordController = TextEditingController();
   bool _adminPasswordVisible = false;
-  final bool _isCreatingAccount = false;
+  bool _isCreatingAccount = false;
+  String? _adminStepError;
 
   // Step 5: Supabase
   final _supabaseUrlController = TextEditingController();
@@ -82,6 +83,39 @@ class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
   }
 
   void _nextStep() {
+    // Validate Step 4 (Admin Account) before proceeding
+    if (_currentStep == 3) {
+      final password = _adminPasswordController.text;
+      final confirm = _adminConfirmPasswordController.text;
+
+      if (password.isEmpty) {
+        setState(() => _adminStepError = 'Please enter an admin password.');
+        return;
+      }
+      if (password.length < 8) {
+        setState(() => _adminStepError = 'Password must be at least 8 characters.');
+        return;
+      }
+      if (password != confirm) {
+        setState(() => _adminStepError = 'Passwords do not match.');
+        return;
+      }
+      setState(() {
+        _adminStepError = null;
+        _isCreatingAccount = true;
+      });
+      _createAdminAccount().then((_) {
+        if (mounted) {
+          setState(() => _isCreatingAccount = false);
+          _pageController.nextPage(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        }
+      });
+      return;
+    }
+
     if (_currentStep < _totalSteps - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -96,6 +130,25 @@ class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
+    }
+  }
+
+  Future<void> _createAdminAccount() async {
+    try {
+      // Save admin credentials locally in SQLite
+      final db = await DatabaseHelper.instance.database;
+      await db.insert('app_settings', {
+        'key': 'admin_email',
+        'value': _instituteEmailController.text.trim().isNotEmpty
+            ? _instituteEmailController.text.trim()
+            : 'admin@omega.internal',
+      });
+      await db.insert('app_settings', {
+        'key': 'admin_password',
+        'value': _adminPasswordController.text,
+      });
+    } catch (_) {
+      // SQLite may not be available on web — continue anyway
     }
   }
 
@@ -202,7 +255,7 @@ class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
                       child: ElevatedButton(
                         onPressed: _currentStep == _totalSteps - 1
                             ? _completeOnboarding
-                            : (_currentStep == 3 ? null : _nextStep),
+                            : (_isCreatingAccount ? null : _nextStep),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: const Color(0xFF0D47A1),
@@ -409,9 +462,17 @@ class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
             const Center(
               child: CircularProgressIndicator(color: Colors.white),
             ),
+          if (_adminStepError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                _adminStepError!,
+                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+              ),
+            ),
           const SizedBox(height: 8),
           const Text(
-            'Note: Admin login uses "admin" as username. The password will be synced to Supabase if configured.',
+            'Note: Login with your email address (from Step 1) and this password.',
             style: TextStyle(color: Colors.white54, fontSize: 12),
           ),
         ],
