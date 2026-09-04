@@ -72,28 +72,25 @@ jobs:
           path: build/web/
           retention-days: 14
 
-  build-windows:
-    name: Build Windows
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-
-      - name: Enable Developer Mode
-        run: reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" /v AllowDevelopmentWithoutDevLicense /t REG_DWORD /d 1 /f
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build Windows
-        run: flutter build windows --release
-
-      - name: Upload Windows Build
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-build
-          path: build/windows/x64/runner/Release/
-          retention-days: 14
+  # Windows build disabled — Firebase C++ SDK has CMake version
+  # incompatibility with Windows runners. Enable when Firebase is
+  # upgraded to v4+ or when Windows support is needed.
+  #
+  # build-windows:
+  #   name: Build Windows
+  #   runs-on: windows-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: subosito/flutter-action@v2
+  #       with:
+  #         channel: stable
+  #     - name: Install dependencies
+  #       run: flutter pub get
+  #     - name: Build Windows
+  #       run: flutter build windows --release
+  #     - name: Upload Windows Build
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: windows-build
+  #         path: build/windows/x64/runner/Release/
+  #         retention-days: 14
