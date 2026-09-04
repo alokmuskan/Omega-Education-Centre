@@ -10,6 +10,8 @@ import '../widgets/search_bar.dart';
 import '../widgets/student_card.dart';
 import 'add_student_screen.dart';
 import 'csv_import/csv_import_screen.dart';
+import '../../../shared/widgets/skeleton_widgets.dart';
+import '../../../shared/widgets/empty_state_widget.dart';
 import 'student_details_screen.dart';
 
 class StudentScreen extends StatefulWidget {
@@ -150,7 +152,7 @@ class _StudentScreenState extends State<StudentScreen> {
           // ── Student List ──────────────────────────────────────────────
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? SkeletonWidgets.pageSkeleton(cardCount: 6, hasHeader: false)
                 : _students.isEmpty
                     ? _buildEmpty()
                     : RefreshIndicator(
@@ -184,23 +186,23 @@ class _StudentScreenState extends State<StudentScreen> {
   }
 
   Widget _buildEmpty() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.school_outlined, size: 72, color: Colors.grey.shade300),
-          const SizedBox(height: 16),
-          Text(
-            _searchQuery.isEmpty &&
-                    _selectedBoard == 'All' &&
-                    _selectedClass == 'All'
-                ? 'No students enrolled yet.\nTap + to add the first student.'
-                : 'No students match your filters.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 15),
-          ),
-        ],
-      ),
+    final hasFilters = _searchQuery.isNotEmpty ||
+        _selectedBoard != 'All' ||
+        _selectedClass != 'All';
+
+    if (hasFilters) {
+      return const EmptyStateWidget.noSearchResults();
+    }
+
+    return EmptyStateWidget(
+      icon: Icons.school_outlined,
+      title: 'No students enrolled yet',
+      subtitle: 'Tap the button below to add your first student',
+      actionLabel: 'Add Student',
+      onAction: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AddStudentScreen()),
+      ).then((_) => _loadStudents()),
     );
   }
 }

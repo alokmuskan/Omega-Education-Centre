@@ -15,6 +15,7 @@ import '../students/screens/student_details_screen.dart';
 import '../tests/repository/test_result_repository.dart';
 import '../tests/screens/student_result_history_screen.dart';
 import 'widgets/menu_card.dart';
+import '../../shared/widgets/skeleton_widgets.dart';
 
 /// Role-Based Dashboard for authenticated Students.
 class StudentDashboardScreen extends StatefulWidget {
@@ -232,7 +233,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? SkeletonWidgets.pageSkeleton(cardCount: 3, hasHeader: false)
             : _errorMessage != null
                 ? Center(
                     child: Padding(

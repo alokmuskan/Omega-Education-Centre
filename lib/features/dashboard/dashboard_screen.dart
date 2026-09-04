@@ -25,11 +25,16 @@ import '../tests/repository/test_repository.dart';
 import '../tests/screens/tests_main_screen.dart';
 import 'widgets/dashboard_header.dart';
 import '../analytics/screens/analytics_dashboard_screen.dart';
+import '../academic_calendar/screens/academic_calendar_screen.dart';
+import '../batches/screens/batch_management_screen.dart';
+import '../branches/screens/branch_management_screen.dart';
+import '../../shared/screens/license_screen.dart';
 import '../audit/screens/audit_log_screen.dart';
 import 'widgets/menu_card.dart';
 import 'widgets/summary_card.dart';
 import '../../shared/services/sync_engine.dart';
 import '../../shared/widgets/academic_activity_card.dart';
+import '../../shared/widgets/skeleton_widgets.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -508,7 +513,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const DashboardHeader(),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? SkeletonWidgets.pageSkeleton(cardCount: 4)
                   : _errorMessage != null
                       ? Center(
                           child: Padding(
@@ -963,6 +968,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       icon: Icons.history,
                                       color: Colors.teal,
                                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AuditLogScreen())).then((_) => _loadDashboardData(silent: true)),
+                                    ),
+                                    MenuCard(
+                                      title: "License",
+                                      icon: Icons.vpn_key,
+                                      color: Colors.amber,
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LicenseScreen())).then((_) => _loadDashboardData(silent: true)),
+                                    ),
+                                    MenuCard(
+                                      title: "Branches",
+                                      icon: Icons.location_city,
+                                      color: Colors.teal,
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BranchManagementScreen())).then((_) => _loadDashboardData(silent: true)),
+                                    ),
+                                    MenuCard(
+                                      title: "Batches",
+                                      icon: Icons.groups,
+                                      color: Colors.cyan,
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BatchManagementScreen())).then((_) => _loadDashboardData(silent: true)),
+                                    ),
+                                    MenuCard(
+                                      title: "Academic Calendar",
+                                      icon: Icons.calendar_month,
+                                      color: Colors.brown,
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AcademicCalendarScreen())).then((_) => _loadDashboardData(silent: true)),
                                     ),
                                     MenuCard(
                                       title: "Analytics",

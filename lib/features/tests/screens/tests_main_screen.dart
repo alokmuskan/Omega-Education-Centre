@@ -7,6 +7,7 @@ import '../repository/test_repository.dart';
 import 'class_results_screen.dart';
 import 'create_test_screen.dart';
 import 'enter_results_screen.dart';
+import '../../../shared/widgets/empty_state_widget.dart';
 
 /// Main Tests & Results module landing screen listing all configured examinations.
 class TestsMainScreen extends StatefulWidget {
@@ -437,22 +438,15 @@ class _TestsMainScreenState extends State<TestsMainScreen> {
   }
 
   Widget _buildEmptyView() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.assignment_outlined, size: 64, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            Text(
-              'No tests found.\nTap "+ Create Test" to configure a new examination.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
-            ),
-          ],
-        ),
-      ),
+    return EmptyStateWidget(
+      icon: Icons.quiz_outlined,
+      title: 'No tests found',
+      subtitle: 'Create a test to start recording student results',
+      actionLabel: 'Create Test',
+      onAction: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CreateTestScreen()),
+      ).then((_) => _loadTests()),
     );
   }
 

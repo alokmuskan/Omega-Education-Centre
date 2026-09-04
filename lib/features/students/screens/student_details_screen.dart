@@ -9,6 +9,8 @@ import '../../authentication/repository/auth_repository.dart';
 import '../../tests/screens/student_result_history_screen.dart';
 import '../models/student_model.dart';
 import '../repository/student_repository.dart';
+import 'id_card_preview_screen.dart';
+import 'tc_preview_screen.dart';
 
 class StudentDetailsScreen extends StatefulWidget {
   final StudentModel student;
@@ -207,6 +209,38 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> {
               title: "Fee Status",
               value: _student.feeStatus,
             ),
+
+            if (_student.id != null)
+              buildInfoTile(
+                icon: Icons.badge,
+                title: "Student ID Card",
+                value: "Generate & share printable ID card",
+                trailing: const Icon(Icons.chevron_right, color: Colors.blue),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => IdCardPreviewScreen(student: _student),
+                    ),
+                  );
+                },
+              ),
+
+            if (_student.id != null)
+              buildInfoTile(
+                icon: Icons.description,
+                title: "Transfer Certificate",
+                value: "Generate & share TC",
+                trailing: const Icon(Icons.chevron_right, color: Colors.teal),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => TcPreviewScreen(student: _student),
+                    ),
+                  );
+                },
+              ),
 
             if (_student.id != null)
               buildInfoTile(

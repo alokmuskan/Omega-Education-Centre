@@ -8,6 +8,8 @@ import 'add_teacher_screen.dart';
 import 'teacher_details_screen.dart';
 import '../widgets/teacher_card.dart';
 import '../widgets/teacher_search_bar.dart';
+import '../../../shared/widgets/skeleton_widgets.dart';
+import '../../../shared/widgets/empty_state_widget.dart';
 
 /// Main screen for managing Teachers in Omega Education Centre ERP.
 class TeacherScreen extends StatefulWidget {
@@ -247,7 +249,7 @@ class _TeacherScreenState extends State<TeacherScreen> {
           // ── Teacher List Body ─────────────────────────────────────────
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? SkeletonWidgets.pageSkeleton(cardCount: 5, hasHeader: false)
                 : _errorMessage != null
                     ? _buildErrorView()
                     : _teachers.isEmpty
@@ -274,45 +276,11 @@ class _TeacherScreenState extends State<TeacherScreen> {
   }
 
   Widget _buildEmptyView(bool hasFilters) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.school_outlined,
-              size: 72,
-              color: Colors.grey.shade300,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              hasFilters
-                  ? 'No teachers match your search filters.'
-                  : 'No teachers added yet.\nTap "+ Add Teacher" to add your first faculty member.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 15,
-              ),
-            ),
-            const SizedBox(height: 20),
-            if (hasFilters)
-              OutlinedButton.icon(
-                onPressed: _clearFilters,
-                icon: const Icon(Icons.clear_all),
-                label: const Text('Reset Filters'),
-              )
-            else
-              ElevatedButton.icon(
-                onPressed: _openAddTeacher,
-                icon: const Icon(Icons.add),
-                label: const Text('Add First Teacher'),
-              ),
-          ],
-        ),
-      ),
-    );
+    if (hasFilters) {
+      return const EmptyStateWidget.noSearchResults();
+    }
+
+    return EmptyStateWidget.noTeachers(onAdd: _openAddTeacher);
   }
 
   Widget _buildErrorView() {

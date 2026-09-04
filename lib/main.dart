@@ -8,6 +8,10 @@ import 'app/app.dart';
 import 'features/backup/services/backup_service.dart';
 import 'shared/config/backend_config.dart';
 import 'shared/services/push_notification_service.dart';
+import 'shared/services/biometric_service.dart';
+import 'shared/services/license_service.dart';
+import 'shared/services/localization_service.dart';
+import 'shared/services/theme_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -73,7 +77,19 @@ void main() async {
     );
   }
 
-  // ── Step 7: Initialize Push Notifications ────────────────────────────
+  // ── Step 7: Initialize Theme Service ─────────────────────────────────
+  await ThemeService.instance.init();
+
+  // ── Step 7b: Initialize Localization Service ─────────────────────────
+  await LocalizationService.instance.init();
+
+  // ── Step 7b: Initialize Biometric Service ────────────────────────────
+  await BiometricService.instance.init();
+
+  // ── Step 7c: Initialize License Service ──────────────────────────────
+  await LicenseService.instance.init();
+
+  // ── Step 8: Initialize Push Notifications ────────────────────────────
   //
   // After Firebase and Supabase are initialized, set up FCM.
   // This is non-blocking — if it fails, in-app notifications still work.
@@ -88,7 +104,7 @@ void main() async {
     }
   }
 
-  // ── Step 8: Run automatic daily backup asynchronously on startup ──────
+  // ── Step 9: Run automatic daily backup asynchronously on startup ──────
   BackupService().runAutomaticDailyBackup();
 
   runApp(const App());

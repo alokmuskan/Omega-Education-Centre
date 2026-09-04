@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../shared/services/analytics_service.dart';
+import '../../../shared/widgets/skeleton_widgets.dart';
 
 /// Analytics & Reports Dashboard for Admin.
 ///
@@ -100,7 +101,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
           ],
         ),
         body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? SkeletonWidgets.pageSkeleton(cardCount: 5)
             : _summary == null
                 ? const Center(child: Text('No data available'))
                 : TabBarView(

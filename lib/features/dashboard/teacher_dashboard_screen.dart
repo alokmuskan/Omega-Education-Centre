@@ -13,6 +13,8 @@ import '../salary/screens/teacher_payment_history_screen.dart';
 import '../teachers/screens/teacher_details_screen.dart';
 import 'widgets/menu_card.dart';
 import 'widgets/summary_card.dart';
+import '../homework/screens/homework_list_screen.dart';
+import '../../shared/widgets/skeleton_widgets.dart';
 
 /// Role-Based Dashboard for authenticated Teachers.
 class TeacherDashboardScreen extends StatefulWidget {
@@ -225,7 +227,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? SkeletonWidgets.pageSkeleton(cardCount: 3, hasHeader: false)
             : _errorMessage != null
                 ? Center(
                     child: Padding(
@@ -540,6 +542,17 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => const NoticeManagementScreen(),
+                                  ),
+                                ).then((_) => _loadTeacherDashboardData()),
+                              ),
+                              MenuCard(
+                                title: "Homework",
+                                icon: Icons.assignment,
+                                color: Colors.brown,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const HomeworkListScreen(),
                                   ),
                                 ).then((_) => _loadTeacherDashboardData()),
                               ),

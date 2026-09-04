@@ -5,6 +5,8 @@ import '../models/teacher_salary_summary_model.dart';
 import '../repository/teacher_salary_repository.dart';
 import '../../../shared/utils/app_session.dart';
 import 'teacher_payment_history_screen.dart';
+import '../../../shared/widgets/skeleton_widgets.dart';
+import '../../../shared/widgets/empty_state_widget.dart';
 
 /// Main Salary Dashboard screen displaying monthly teacher salary summaries,
 /// overall center financial totals, and payment status badges.
@@ -212,7 +214,7 @@ class _SalaryDashboardScreenState extends State<SalaryDashboardScreen> {
           // ── Teacher List / Table ──────────────────────────────────────
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? SkeletonWidgets.pageSkeleton(cardCount: 4, hasHeader: false)
                 : _errorMessage != null
                     ? _buildErrorView()
                     : _summaries.isEmpty
@@ -435,23 +437,10 @@ class _SalaryDashboardScreenState extends State<SalaryDashboardScreen> {
   }
 
   Widget _buildEmptyView() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.account_balance_wallet_outlined,
-                size: 64, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            Text(
-              'No teacher salary records for $_displayMonth.\n(Attendance hours or payments will appear here).',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
-            ),
-          ],
-        ),
-      ),
+    return EmptyStateWidget(
+      icon: Icons.payments_outlined,
+      title: 'No salary records',
+      subtitle: 'No teacher salary records for $_displayMonth',
     );
   }
 

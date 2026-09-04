@@ -7,6 +7,9 @@ import '../features/authentication/repository/auth_repository.dart';
 import '../features/onboarding/screens/onboarding_wizard_screen.dart';
 import '../shared/config/backend_config.dart';
 import '../shared/services/sync_engine.dart';
+import '../l10n/app_translations.dart';
+import '../shared/services/localization_service.dart';
+import '../shared/services/theme_service.dart';
 import '../shared/themes/app_theme.dart';
 import '../shared/utils/app_session.dart';
 
@@ -15,12 +18,31 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorKey: navigatorKey,
-      debugShowCheckedModeBanner: false,
-      title: 'Omega Education Centre',
-      theme: AppTheme.lightTheme,
-      home: const AppStartupWrapper(),
+    return AnimatedBuilder(
+      animation: ThemeService.instance,
+      builder: (context, _) {
+        return AnimatedBuilder(
+          animation: LocalizationService.instance,
+          builder: (context, _) {
+            return MaterialApp(
+              navigatorKey: navigatorKey,
+              debugShowCheckedModeBanner: false,
+              title: 'Omega Education Centre',
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: ThemeService.instance.themeMode,
+              locale: LocalizationService.instance.locale,
+              supportedLocales: const [Locale('en'), Locale('hi')],
+              localizationsDelegates: const [
+                AppTranslationsDelegate(),
+                DefaultMaterialLocalizations.delegate,
+                DefaultWidgetsLocalizations.delegate,
+              ],
+              home: const AppStartupWrapper(),
+            );
+          },
+        );
+      },
     );
   }
 }

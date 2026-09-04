@@ -4,6 +4,7 @@ import '../../../shared/constants/app_constants.dart';
 import '../../../shared/utils/app_session.dart';
 import '../repository/fee_repository.dart';
 import 'student_fee_details_screen.dart';
+import '../../../shared/widgets/skeleton_widgets.dart';
 
 /// Role-gated Master Fee Management Dashboard for Admin / Director.
 class AdminFeeDashboardScreen extends StatefulWidget {
@@ -195,7 +196,7 @@ class _AdminFeeDashboardScreenState extends State<AdminFeeDashboardScreen> with 
           // Tab Views
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? SkeletonWidgets.pageSkeleton(cardCount: 4, hasHeader: false)
                 : _errorMessage != null
                     ? Center(child: Text(_errorMessage!))
                     : TabBarView(
