@@ -40,7 +40,7 @@ jobs:
         run: flutter pub get
 
       - name: Run tests
-        run: flutter test --coverage
+        run: flutter test --coverage --concurrency=1
 
       - name: Upload coverage
         if: success()

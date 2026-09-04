@@ -104,7 +104,7 @@ void main() {
       // Use a Teacher account (Admin cannot be created locally)
       await authRepo.createUserAccount(
         username: 'test_teacher_reject',
-        password: 'correctPassword',
+        password: 'Correct@Pass1',
         role: AppConstants.roleTeacher,
       );
 
@@ -227,7 +227,7 @@ void main() {
     test('10. Admin can reset Teacher password', () async {
       await authRepo.createUserAccount(
         username: 'teacher_target',
-        password: 'initialPassword',
+        password: 'Initial@Pass1',
         role: AppConstants.roleTeacher,
       );
 
@@ -243,7 +243,7 @@ void main() {
     test('11. Admin can reset Student password', () async {
       await authRepo.createUserAccount(
         username: 'student_target',
-        password: 'initialStudentPass',
+        password: 'Initial@Student1',
         role: AppConstants.roleStudent,
       );
 
@@ -260,17 +260,17 @@ void main() {
       AppSession.instance.setAdminSession();
       await authRepo.createUserAccount(
         username: 'user_password_test',
-        password: 'originalPassword',
+        password: 'Original@Pass1',
         role: AppConstants.roleTeacher,
       );
 
       await authRepo.changePassword(
         username: 'user_password_test',
-        currentPassword: 'originalPassword',
+        currentPassword: 'Original@Pass1',
         newPassword: 'updatedPassword999',
       );
 
-      final oldLoginResult = await authRepo.login('user_password_test', 'originalPassword');
+      final oldLoginResult = await authRepo.login('user_password_test', 'Original@Pass1');
       expect(oldLoginResult.success, isFalse);
 
       final newLoginResult = await authRepo.login('user_password_test', 'updatedPassword999');
@@ -280,11 +280,11 @@ void main() {
     test('13. No role-switching: Role is derived from authenticated record', () async {
       await authRepo.createUserAccount(
         username: 'teacher_no_switch',
-        password: 'teacherPassword',
+        password: 'Teacher@Pass1',
         role: AppConstants.roleTeacher,
       );
 
-      final result = await authRepo.login('teacher_no_switch', 'teacherPassword');
+      final result = await authRepo.login('teacher_no_switch', 'Teacher@Pass1');
       expect(result.role, AppConstants.roleTeacher);
       expect(AppSession.instance.currentRole, AppConstants.roleTeacher);
       expect(AppSession.instance.isAdmin, isFalse);

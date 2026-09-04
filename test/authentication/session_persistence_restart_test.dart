@@ -48,12 +48,12 @@ void main() {
 
       await authRepository.createUserAccount(
         username: '9888877777',
-        password: 'teacherPass123',
+        password: 'Teacher@123',
         role: AppConstants.roleTeacher,
         referenceId: teacherId,
       );
 
-      final loginResult = await authRepository.login('9888877777', 'teacherPass123');
+      final loginResult = await authRepository.login('9888877777', 'Teacher@123');
       expect(loginResult.success, isTrue);
 
       // Simulate process termination
@@ -81,12 +81,12 @@ void main() {
 
       await authRepository.createUserAccount(
         username: '8888',
-        password: 'studentPass123',
+        password: 'Student@123',
         role: AppConstants.roleStudent,
         referenceId: studentId,
       );
 
-      final loginResult = await authRepository.login('8888', 'studentPass123');
+      final loginResult = await authRepository.login('8888', 'Student@123');
       expect(loginResult.success, isTrue);
 
       // Simulate process termination
@@ -135,12 +135,12 @@ void main() {
 
       await authRepository.createUserAccount(
         username: '7777',
-        password: 'studentPass123',
+        password: 'Student@123',
         role: AppConstants.roleStudent,
         referenceId: studentId,
       );
 
-      await authRepository.login('7777', 'studentPass123');
+      await authRepository.login('7777', 'Student@123');
 
       // Disable account while user is away
       await db.update(

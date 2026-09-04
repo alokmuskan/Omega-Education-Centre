@@ -28,6 +28,12 @@ void main() {
       await db.delete('students');
     });
 
+    tearDown(() async {
+      try {
+        AppSession.instance.clearSession();
+      } catch (_) {}
+    });
+
     test('1. Admin authentication derives Admin role strictly for admin session', () async {
       await AppSession.instance.setAdminSession(username: 'admin');
       expect(AppSession.instance.isAdmin, isTrue);
@@ -50,12 +56,12 @@ void main() {
 
       await authRepository.createUserAccount(
         username: '9876543210',
-        password: 'teacher123',
+        password: 'Teacher@123',
         role: AppConstants.roleTeacher,
         referenceId: teacherId,
       );
 
-      final result = await authRepository.login('9876543210', 'teacher123');
+      final result = await authRepository.login('9876543210', 'Teacher@123');
       expect(result.success, isTrue);
       expect(result.role, equals(AppConstants.roleTeacher));
       expect(AppSession.instance.isTeacher, isTrue);
@@ -78,12 +84,12 @@ void main() {
 
       await authRepository.createUserAccount(
         username: '9498',
-        password: 'student123',
+        password: 'Student@123',
         role: AppConstants.roleStudent,
         referenceId: studentId,
       );
 
-      final result = await authRepository.login('9498', 'student123');
+      final result = await authRepository.login('9498', 'Student@123');
       expect(result.success, isTrue);
       expect(result.role, equals(AppConstants.roleStudent));
       expect(AppSession.instance.isStudent, isTrue);
@@ -93,11 +99,11 @@ void main() {
     test('4. Invalid password is rejected cleanly with exact error message', () async {
       final result = await authRepository.login('admin', 'wrongpassword');
       expect(result.success, isFalse);
-      expect(result.message, equals('Invalid Admin password.'));
+      expect(result.message, equals('Invalid credentials. 4 attempts remaining before lockout.'));
     });
 
     test('5. Unknown User ID is rejected cleanly', () async {
-      final result = await authRepository.login('unknown_user_999999', 'password123');
+      final result = await authRepository.login('unknown_user_999999', 'Password@123');
       expect(result.success, isFalse);
     });
 
@@ -116,12 +122,12 @@ void main() {
 
       await authRepository.createUserAccount(
         username: '9999',
-        password: 'password123',
+        password: 'Password@123',
         role: AppConstants.roleStudent,
         referenceId: studentId,
       );
 
-      final result = await authRepository.login('9999', 'password123');
+      final result = await authRepository.login('9999', 'Password@123');
       expect(result.success, isFalse);
       expect(result.message, equals('Account is disabled. Please contact Administrator.'));
     });
@@ -140,12 +146,12 @@ void main() {
       });
       await authRepository.createUserAccount(
         username: '9498',
-        password: 'student123',
+        password: 'Student@123',
         role: AppConstants.roleStudent,
         referenceId: studentId,
       );
 
-      final result = await authRepository.login('9498', 'student123');
+      final result = await authRepository.login('9498', 'Student@123');
       expect(result.role, equals(AppConstants.roleStudent));
       expect(AppSession.instance.isAdmin, isFalse);
       expect(AppSession.instance.isTeacher, isFalse);
@@ -195,7 +201,7 @@ void main() {
 
       final authResult = await authRepository.login('admin', 'admin123');
       expect(authResult.success, isFalse);
-      expect(authResult.message, equals('Invalid Admin password.'));
+      expect(authResult.message, equals('Invalid credentials. 4 attempts remaining before lockout.'));
     });
   });
 }

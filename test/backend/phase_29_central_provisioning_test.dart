@@ -25,6 +25,12 @@ void main() {
       await db.delete('users');
     });
 
+    tearDown(() async {
+      try {
+        AppSession.instance.clearSession();
+      } catch (_) {}
+    });
+
     test('1 & 2. Prototype Test Admin identity creation maps User ID to internal email format', () {
       final email = CentralAuthService.mapUserIdToEmail('phase29_test_admin');
       expect(email, equals('phase29_test_admin@omega.internal'));
@@ -47,11 +53,11 @@ void main() {
     test('6 & 7. Local SQLite authentication with test account works with correct password and rejects wrong password', () async {
       await authRepository.createUserAccount(
         username: 'phase29_test_admin',
-        password: 'testAdminPass123',
+        password: 'TestAdmin@123',
         role: AppConstants.roleAdmin,
       );
 
-      final validLogin = await authRepository.login('phase29_test_admin', 'testAdminPass123');
+      final validLogin = await authRepository.login('phase29_test_admin', 'TestAdmin@123');
       expect(validLogin.success, isTrue);
       expect(validLogin.role, equals(AppConstants.roleAdmin));
 
@@ -63,7 +69,7 @@ void main() {
     test('8. Disabled test account login is rejected with exact account disabled message', () async {
       final db = await DatabaseHelper.instance.database;
       final salt = PasswordUtil.generateSalt();
-      final hash = PasswordUtil.hashPassword('testAdminPass123', salt);
+      final hash = PasswordUtil.hashPassword('TestAdmin@123', salt);
       await db.insert('users', {
         'username': 'phase29_test_admin',
         'passwordHash': hash,
@@ -73,7 +79,7 @@ void main() {
         'createdAt': DateTime.now().toIso8601String(),
       });
 
-      final disabledLogin = await authRepository.login('phase29_test_admin', 'testAdminPass123');
+      final disabledLogin = await authRepository.login('phase29_test_admin', 'TestAdmin@123');
       expect(disabledLogin.success, isFalse);
       expect(disabledLogin.message, equals('Account is disabled. Please contact Administrator.'));
     });

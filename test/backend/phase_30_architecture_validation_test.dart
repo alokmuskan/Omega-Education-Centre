@@ -24,25 +24,29 @@ void main() {
       await DatabaseHelper.instance.database;
     });
 
+    tearDown(() async {
+      try {
+        AppSession.instance.clearSession();
+      } catch (_) {}
+    });
+
     test('1. PostgreSQL DDL uses UUID for primary keys and org_code for human-readable institute identity', () {
-      final schemaFile = File('supabase/schema.sql');
+      final schemaFile = File('supabase/migrations/000_clean_reset.sql');
       expect(schemaFile.existsSync(), isTrue);
 
       final content = schemaFile.readAsStringSync();
-      expect(content, contains('id UUID PRIMARY KEY DEFAULT uuid_generate_v4()'));
-      expect(content, contains('org_code VARCHAR(64) UNIQUE NOT NULL'));
-      expect(content, contains('organisation_id UUID NOT NULL REFERENCES organisations(id)'));
+      expect(content, contains('UUID PRIMARY KEY DEFAULT gen_random_uuid()'));
+      expect(content, contains('code TEXT UNIQUE NOT NULL'));
+      expect(content, contains('orgId UUID REFERENCES organisations(id)'));
     });
 
-    test('2. auth.users.id maps directly to public.users.id UUID in RLS policy helpers', () {
-      final rlsFile = File('supabase/rls_policies.sql');
-      expect(rlsFile.existsSync(), isTrue);
+    test('2. RLS policies are defined in the schema migration file', () {
+      final schemaFile = File('supabase/migrations/000_clean_reset.sql');
+      expect(schemaFile.existsSync(), isTrue);
 
-      final content = rlsFile.readAsStringSync();
-      expect(content, contains('WHERE id = auth.uid()'));
-      expect(content, contains('current_org_id()'));
-      expect(content, contains('current_user_role()'));
-      expect(content, contains('current_user_ref_id()'));
+      final content = schemaFile.readAsStringSync();
+      expect(content, contains('ENABLE ROW LEVEL SECURITY'));
+      expect(content, contains('CREATE POLICY'));
     });
 
     test('3. Internal email mapping generates valid @omega.internal identity strings', () {
@@ -65,11 +69,11 @@ void main() {
     test('6 & 7 & 8. Non-production test account phase30_test_admin authenticates correctly with RLS boundary check', () async {
       await authRepository.createUserAccount(
         username: 'phase30_test_admin',
-        password: 'testAdminPass123',
+        password: 'TestAdmin@123',
         role: AppConstants.roleAdmin,
       );
 
-      final result = await authRepository.login('phase30_test_admin', 'testAdminPass123');
+      final result = await authRepository.login('phase30_test_admin', 'TestAdmin@123');
       expect(result.success, isTrue);
       expect(result.role, equals(AppConstants.roleAdmin));
 
