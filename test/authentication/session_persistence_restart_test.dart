@@ -1,10 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omega_education_centre/core/database/database_helper.dart';
 import 'package:omega_education_centre/features/authentication/repository/auth_repository.dart';
-import 'package:omega_education_centre/features/dashboard/dashboard_screen.dart';
 import 'package:omega_education_centre/features/dashboard/student_dashboard_screen.dart';
 import 'package:omega_education_centre/features/dashboard/teacher_dashboard_screen.dart';
-import 'package:omega_education_centre/shared/config/backend_config.dart';
 import 'package:omega_education_centre/shared/constants/app_constants.dart';
 import 'package:omega_education_centre/shared/utils/app_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -50,12 +48,12 @@ void main() {
 
       await authRepository.createUserAccount(
         username: '9888877777',
-        password: 'teacherPass123',
+        password: 'Teacher@123',
         role: AppConstants.roleTeacher,
         referenceId: teacherId,
       );
 
-      final loginResult = await authRepository.login('9888877777', 'teacherPass123');
+      final loginResult = await authRepository.login('9888877777', 'Teacher@123');
       expect(loginResult.success, isTrue);
 
       // Simulate process termination
@@ -83,12 +81,12 @@ void main() {
 
       await authRepository.createUserAccount(
         username: '8888',
-        password: 'studentPass123',
+        password: 'Student@123',
         role: AppConstants.roleStudent,
         referenceId: studentId,
       );
 
-      final loginResult = await authRepository.login('8888', 'studentPass123');
+      final loginResult = await authRepository.login('8888', 'Student@123');
       expect(loginResult.success, isTrue);
 
       // Simulate process termination
@@ -137,12 +135,12 @@ void main() {
 
       await authRepository.createUserAccount(
         username: '7777',
-        password: 'studentPass123',
+        password: 'Student@123',
         role: AppConstants.roleStudent,
         referenceId: studentId,
       );
 
-      await authRepository.login('7777', 'studentPass123');
+      await authRepository.login('7777', 'Student@123');
 
       // Disable account while user is away
       await db.update(

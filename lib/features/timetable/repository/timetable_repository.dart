@@ -1,4 +1,5 @@
 import '../../../core/database/database_helper.dart';
+import '../../../shared/services/sync_engine.dart';
 import '../models/timetable_entry_model.dart';
 
 /// Repository for Timetable SQLite database operations.
@@ -78,7 +79,16 @@ class TimetableRepository {
     map['createdAt'] = entry.createdAt ?? nowIso;
     map['updatedAt'] = nowIso;
 
-    return await db.insert('timetable_entries', map);
+    final entryId = await db.insert('timetable_entries', map);
+
+    // Sync to cloud
+    SyncEngine.instance.registerTimetableChange(
+      entryId: entryId,
+      operation: 'CREATE',
+      payload: map..['id'] = entryId,
+    );
+
+    return entryId;
   }
 
   Future<int> updateTimetableEntry(TimetableEntryModel entry) async {

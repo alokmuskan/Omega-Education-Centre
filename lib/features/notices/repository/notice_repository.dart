@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import '../../../core/database/database_helper.dart';
+import '../../../shared/services/sync_engine.dart';
 import '../models/notice_model.dart';
 
 /// Container for Admin Read Analytics for a notice.
@@ -98,7 +99,16 @@ class NoticeRepository {
     map['createdAt'] = notice.createdAt ?? nowIso;
     map['updatedAt'] = nowIso;
 
-    return await db.insert('notices', map);
+    final noticeId = await db.insert('notices', map);
+
+    // Sync to cloud
+    SyncEngine.instance.registerNoticeChange(
+      noticeId: noticeId,
+      operation: 'CREATE',
+      payload: map..['id'] = noticeId,
+    );
+
+    return noticeId;
   }
 
   Future<int> updateNotice(NoticeModel notice) async {

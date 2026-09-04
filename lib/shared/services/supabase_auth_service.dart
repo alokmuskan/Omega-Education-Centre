@@ -184,9 +184,10 @@ class SupabaseAuthService {
 
   /// Authenticates Admin with Supabase Auth using transient password entered during login.
   ///
-  /// Maps `admin` to `admin@omega.internal`. Password is NOT stored or persisted.
-  Future<bool> signInAdmin(String password) async {
-    final email = CentralAuthService.mapUserIdToEmail('admin');
+  /// Maps the username to an email via CentralAuthService and authenticates.
+  /// Password is NOT stored or persisted.
+  Future<bool> signInAdmin(String password, {String username = 'admin'}) async {
+    final email = CentralAuthService.mapUserIdToEmail(username);
 
     final anonKey = BackendConfig.supabaseAnonKey ?? '';
     final url = Uri.parse('${BackendConfig.supabaseUrl}/auth/v1/token?grant_type=password');

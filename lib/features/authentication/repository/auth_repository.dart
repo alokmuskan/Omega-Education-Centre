@@ -2,8 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/data_sources/data_source_factory.dart';
 import '../../../core/database/database_helper.dart';
 import '../../../shared/constants/app_constants.dart';
+import '../../../shared/services/audit_service.dart';
 import '../../../shared/services/supabase_auth_service.dart';
 import '../../../shared/utils/app_session.dart';
 import '../../../shared/utils/login_attempt_tracker.dart';
@@ -129,10 +131,10 @@ class AuthRepository {
     // There is no local password fallback.
     // -------------------------------------------------------------------------
 
-    if (cleanUser.toLowerCase() == 'admin') {
+    if (await _isAdminUsername(cleanUser)) {
       if (kDebugMode) {
         // ignore: avoid_print
-        print('[AUTH-TRACE-ADMIN-01] Admin login started');
+        print('[AUTH-TRACE-ADMIN-01] Admin login started for username=$cleanUser');
         // ignore: avoid_print
         print('[AUTH-TRACE-ADMIN-02] Authentication authority = Supabase');
         // ignore: avoid_print
@@ -142,7 +144,7 @@ class AuthRepository {
       }
 
       final authenticated =
-          await SupabaseAuthService.instance.signInAdmin(cleanPass);
+          await SupabaseAuthService.instance.signInAdmin(cleanPass, username: cleanUser);
 
       if (!authenticated) {
         if (kDebugMode) {
@@ -188,7 +190,7 @@ class AuthRepository {
       // The plaintext password is never stored.
       // -----------------------------------------------------------------------
 
-      if (!kIsWeb) {
+      if (DataSourceFactory.create().isLocal) {
         try {
           await _syncLocalAdminCredential(cleanPass);
 
@@ -245,7 +247,7 @@ class AuthRepository {
     // On web: authenticate via Supabase Auth (auto-provisions if needed)
     // -------------------------------------------------------------------------
 
-    if (kIsWeb) {
+    if (DataSourceFactory.create().isRemote) {
       return _webAuthenticate(cleanUser, cleanPass);
     }
 
@@ -612,6 +614,23 @@ class AuthRepository {
   /// IMPORTANT:
   /// - This method is NOT used to authenticate Admin.
   /// - Supabase authentication must succeed first.
+  /// Checks if a username is registered as admin in the local SQLite database.
+  /// Returns true if the username exists in admin_accounts table with isActive=true.
+  Future<bool> _isAdminUsername(String username) async {
+    try {
+      final db = await _dbHelper.database;
+      final results = await db.query(
+        'admin_accounts',
+        where: 'LOWER(username) = LOWER(?) AND isActive = 1',
+        whereArgs: [username],
+        limit: 1,
+      );
+      return results.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// - The plaintext password is never stored.
   /// - Only a salted PBKDF2 hash and salt are stored locally.
   Future<void> _syncLocalAdminCredential(
@@ -819,7 +838,7 @@ class AuthRepository {
     // the local and central credentials inconsistent.
     // -------------------------------------------------------------------------
 
-    if (cleanUser.toLowerCase() == 'admin') {
+    if (await _isAdminUsername(cleanUser)) {
       throw Exception(
         'Admin password is managed by Supabase Auth. '
         'Do not change the Admin password through the local account system.',
@@ -895,6 +914,14 @@ class AuthRepository {
       where: 'id = ?',
       whereArgs: [userMap['id']],
     );
+
+    // Audit log
+    await AuditService.instance.logAction(
+      action: AuditService.actionPasswordChange,
+      entityType: 'users',
+      entityId: userMap['id'].toString(),
+      newValue: {'username': cleanUser, 'changedBy': 'self'},
+    );
   }
 
   // ===========================================================================
@@ -935,7 +962,7 @@ class AuthRepository {
     // Admin account cannot be reset through local SQLite.
     // -------------------------------------------------------------------------
 
-    if (cleanUser.toLowerCase() == 'admin') {
+    if (await _isAdminUsername(cleanUser)) {
       throw Exception(
         'Admin password is managed by Supabase Auth. '
         'Use the Supabase Admin password management flow.',
@@ -998,6 +1025,14 @@ class AuthRepository {
         referenceId: referenceId,
       );
     }
+
+    // Audit log
+    await AuditService.instance.logAction(
+      action: AuditService.actionPasswordReset,
+      entityType: 'users',
+      entityId: userMaps.isNotEmpty ? userMaps.first['id'].toString() : null,
+      newValue: {'targetUsername': cleanUser, 'changedBy': 'admin'},
+    );
   }
 
   // ===========================================================================
@@ -1013,7 +1048,7 @@ class AuthRepository {
         targetUsername.trim();
 
     // Admin status is controlled by Supabase Auth.
-    if (cleanUser.toLowerCase() == 'admin') {
+    if (await _isAdminUsername(cleanUser)) {
       throw Exception(
         'Admin account status is managed by Supabase Auth.',
       );
@@ -1090,7 +1125,7 @@ class AuthRepository {
     final cleanUser =
         username.trim();
 
-    if (cleanUser.toLowerCase() == 'admin') {
+    if (await _isAdminUsername(cleanUser)) {
       throw Exception(
         'The Admin account is managed by Supabase Auth and cannot be '
         'created through the local account system.',
@@ -1236,7 +1271,7 @@ class AuthRepository {
       // Do not attempt to validate Admin using SQLite password hashes.
       // -----------------------------------------------------------------------
 
-      if (cleanUser.toLowerCase() == 'admin' ||
+      if (await _isAdminUsername(cleanUser) ||
           role == AppConstants.roleAdmin) {
         final token =
             await SupabaseAuthService.instance
@@ -1268,7 +1303,7 @@ class AuthRepository {
       // Web session restoration via Supabase Auth token validation
       // -----------------------------------------------------------------------
 
-      if (kIsWeb) {
+      if (DataSourceFactory.create().isRemote) {
         final token =
             await SupabaseAuthService.instance.getValidAccessToken();
 
@@ -1461,10 +1496,11 @@ class AuthRepository {
       );
     }
 
-    // Admin login via Supabase Auth
-    if (cleanUser.toLowerCase() == 'admin') {
+    // All web authentication goes through Supabase Auth.
+    // signInUser checks admin_accounts, teachers, and students tables.
+    {
       final authenticated =
-          await SupabaseAuthService.instance.signInAdmin(cleanPass);
+          await SupabaseAuthService.instance.signInUser(cleanUser, cleanPass);
 
       if (!authenticated) {
         tracker.recordFailedAttempt(cleanUser);
@@ -1474,7 +1510,7 @@ class AuthRepository {
           return AuthResult(
             success: false,
             role: '',
-            message: 'Invalid Admin password. Account locked for $lockout minute${lockout == 1 ? '' : 's'}.',
+            message: 'Invalid password. Account locked for $lockout minute${lockout == 1 ? '' : 's'}.',
           );
         }
         return AuthResult(
@@ -1490,43 +1526,9 @@ class AuthRepository {
       return const AuthResult(
         success: true,
         role: AppConstants.roleAdmin,
-        message: 'Admin login successful.',
+        message: 'Login successful.',
       );
     }
-
-    // Teacher/Student login via Supabase Auth (auto-provisions if needed)
-    final authenticated =
-        await SupabaseAuthService.instance.signInUser(cleanUser, cleanPass);
-
-    if (!authenticated) {
-      tracker.recordFailedAttempt(cleanUser);
-      final remaining = tracker.getRemainingAttempts(cleanUser);
-      final lockout = tracker.getMinutesUntilUnlock(cleanUser);
-      if (lockout > 0) {
-        return AuthResult(
-          success: false,
-          role: '',
-          message: 'Invalid credentials. Account locked for $lockout minute${lockout == 1 ? '' : 's'}.',
-        );
-      }
-      return AuthResult(
-        success: false,
-        role: '',
-        message: 'Invalid credentials. $remaining attempt${remaining == 1 ? '' : 's'} remaining before lockout.',
-      );
-    }
-
-    tracker.clearAttempts(cleanUser);
-
-    // On web, we don't have local user data to determine role.
-    // Default to Teacher for non-admin web logins (Admin can change later).
-    await AppSession.instance.setAdminSession(username: cleanUser);
-
-    return const AuthResult(
-      success: true,
-      role: AppConstants.roleAdmin,
-      message: 'Login successful.',
-    );
   }
 
   // ===========================================================================

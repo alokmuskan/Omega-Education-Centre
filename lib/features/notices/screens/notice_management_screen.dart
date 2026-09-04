@@ -6,6 +6,7 @@ import '../models/notice_model.dart';
 import '../repository/notice_repository.dart';
 import 'add_edit_notice_screen.dart';
 import 'notice_details_screen.dart';
+import '../../../shared/widgets/empty_state_widget.dart';
 
 /// Role-based screen for Notice & Announcement Board with per-user read tracking.
 class NoticeManagementScreen extends StatefulWidget {
@@ -277,24 +278,7 @@ class _NoticeManagementScreenState extends State<NoticeManagementScreen> {
                         ),
                       )
                     : _notices.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.notifications_off, size: 64, color: Colors.grey.shade400),
-                                const SizedBox(height: 16),
-                                Text(
-                                  AppSession.instance.isAdmin ? 'No Notices Found' : 'No Notices Available For You',
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  AppSession.instance.isAdmin ? 'Create your first announcement using the button below.' : 'You have no active announcements at this time.',
-                                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                                ),
-                              ],
-                            ),
-                          )
+                        ? const EmptyStateWidget.noNotices()
                         : RefreshIndicator(
                             onRefresh: _loadNotices,
                             child: ListView.builder(

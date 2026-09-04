@@ -5,6 +5,7 @@ import '../../../shared/utils/app_session.dart';
 import '../models/timetable_entry_model.dart';
 import '../repository/timetable_repository.dart';
 import 'add_edit_timetable_screen.dart';
+import '../../../shared/widgets/empty_state_widget.dart';
 
 /// Role-based screen for Timetable Management & Viewing.
 class TimetableManagementScreen extends StatefulWidget {
@@ -241,21 +242,10 @@ class _TimetableManagementScreenState extends State<TimetableManagementScreen> {
                       )
                     : _entries.isEmpty
                         ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.calendar_month, size: 64, color: Colors.grey.shade400),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'No Timetable Entries Found',
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'No classes scheduled for $_selectedDay.',
-                                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                                ),
-                              ],
+                            child: EmptyStateWidget(
+                              icon: Icons.table_chart_outlined,
+                              title: 'No timetable entries',
+                              subtitle: 'No classes scheduled for $_selectedDay',
                             ),
                           )
                         : ListView.builder(

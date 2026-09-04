@@ -1,4 +1,5 @@
 import '../../../core/database/database_helper.dart';
+import '../../../shared/services/sync_engine.dart';
 import '../../../shared/utils/attendance_date_validator.dart';
 import '../../teachers/models/teacher_model.dart';
 import '../../teachers/repository/teacher_repository.dart';
@@ -36,7 +37,16 @@ class DailyClassRecordRepository {
     recordMap['createdAt'] = record.createdAt ?? nowIso;
     recordMap['updatedAt'] = nowIso;
 
-    return await db.insert('daily_class_records', recordMap);
+    final recordId = await db.insert('daily_class_records', recordMap);
+
+    // Sync to cloud
+    SyncEngine.instance.registerDailyClassRecordChange(
+      recordId: recordId,
+      operation: 'CREATE',
+      payload: recordMap..['id'] = recordId,
+    );
+
+    return recordId;
   }
 
   // ──────────────────────────────────────────────────────────────────────

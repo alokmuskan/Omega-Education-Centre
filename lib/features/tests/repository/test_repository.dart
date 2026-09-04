@@ -1,4 +1,5 @@
 import '../../../core/database/database_helper.dart';
+import '../../../shared/services/sync_engine.dart';
 import '../models/test_model.dart';
 import '../models/test_subject_model.dart';
 
@@ -17,23 +18,39 @@ class TestRepository {
     final db = await _dbHelper.database;
     final nowIso = DateTime.now().toIso8601String();
 
-    return await db.transaction((txn) async {
+    final testId = await db.transaction((txn) async {
       final testMap = test.toMap();
       testMap['createdAt'] = test.createdAt ?? nowIso;
       testMap['updatedAt'] = nowIso;
 
-      final testId = await txn.insert('tests', testMap);
+      final id = await txn.insert('tests', testMap);
 
       for (final subj in subjects) {
         final subjMap = subj.toMap();
-        subjMap['testId'] = testId;
+        subjMap['testId'] = id;
         subjMap['createdAt'] = nowIso;
         subjMap['updatedAt'] = nowIso;
         await txn.insert('test_subjects', subjMap);
       }
 
-      return testId;
+      return id;
     });
+
+    // Sync to cloud
+    SyncEngine.instance.registerTestChange(
+      testId: testId,
+      operation: 'CREATE',
+      payload: test.toMap()..['id'] = testId,
+    );
+    for (int i = 0; i < subjects.length; i++) {
+      SyncEngine.instance.registerTestSubjectChange(
+        subjectId: 0, // will be assigned by server
+        operation: 'CREATE',
+        payload: subjects[i].toMap(),
+      );
+    }
+
+    return testId;
   }
 
   // ──────────────────────────────────────────────────────────────────────

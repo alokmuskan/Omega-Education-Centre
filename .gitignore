@@ -8,6 +8,7 @@ pubspec.lock
 
 # Android
 android/.gradle/
+android/.kotlin/
 android/app/debug/
 android/app/profile/
 android/app/release/
@@ -71,4 +72,4 @@ supabase/.branches/
 # Environment / Secrets
 .env
 .env.local
-backend_config.dart
+# supabase/migrations/003_emergency_recovery.sql

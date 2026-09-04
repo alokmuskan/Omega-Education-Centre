@@ -24,7 +24,7 @@ class PdfGeneratorService {
   }
 
   /// Generates A4 Landscape PDF bytes for Class-wise Results (Multi-page, Notice Board layout).
-  static Future<Uint8List> generateClassResultPdf(ClassResultExportData data) async {
+  static Future<Uint8List> generateClassResultPdf(ClassResultExportData data, {String language = 'en'}) async {
     final pdf = pw.Document();
     final logoBytes = await _loadLogoBytes();
     final logoImage = logoBytes != null ? pw.MemoryImage(logoBytes) : null;
@@ -230,6 +230,7 @@ class PdfGeneratorService {
     StudentTestSummaryModel summary, {
     StudentAttendanceSummary? attendanceSummary,
     String? attendanceMonthLabel,
+    String language = 'en',
   }) async {
     final pdf = pw.Document();
     final logoBytes = await _loadLogoBytes();

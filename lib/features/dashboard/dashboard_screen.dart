@@ -1,13 +1,8 @@
-import 'dart:convert';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
+import '../../core/data_sources/data_source_factory.dart';
 import '../../core/database/database_helper.dart';
-import '../../shared/config/backend_config.dart';
-import '../../shared/services/supabase_auth_service.dart';
 import '../../shared/utils/app_session.dart';
 import '../attendance/screens/attendance_main_screen.dart';
 import '../class_register/screens/daily_class_register_main_screen.dart';
@@ -24,10 +19,19 @@ import '../teachers/screens/teacher_screen.dart';
 import '../tests/repository/test_repository.dart';
 import '../tests/screens/tests_main_screen.dart';
 import 'widgets/dashboard_header.dart';
+import '../analytics/screens/analytics_dashboard_screen.dart';
+import '../academic_calendar/screens/academic_calendar_screen.dart';
+import '../batches/screens/batch_management_screen.dart';
+import '../library/screens/library_screen.dart';
+import '../transport/screens/transport_management_screen.dart';
+import '../branches/screens/branch_management_screen.dart';
+import '../../shared/screens/license_screen.dart';
+import '../audit/screens/audit_log_screen.dart';
 import 'widgets/menu_card.dart';
 import 'widgets/summary_card.dart';
 import '../../shared/services/sync_engine.dart';
 import '../../shared/widgets/academic_activity_card.dart';
+import '../../shared/widgets/skeleton_widgets.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -69,117 +73,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  /// Loads dashboard data from Supabase REST API for Web platform.
-  Future<void> _loadDashboardDataFromSupabase() async {
-    try {
-      if (!BackendConfig.isBackendConfigured) {
-        if (!mounted) return;
-        setState(() {
-          _isLoading = false;
-          _errorMessage = null;
-        });
-        return;
-      }
-
-      final anonKey = BackendConfig.supabaseAnonKey ?? '';
-      final jwtToken = await SupabaseAuthService.instance.getValidAccessToken();
-      if (jwtToken == null) {
-        if (!mounted) return;
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Not authenticated. Please log in again.';
-        });
-        return;
-      }
-
-      final headers = {
-        'apikey': anonKey,
-        'Authorization': 'Bearer $jwtToken',
-        'Content-Type': 'application/json',
-      };
-      final baseUrl = BackendConfig.supabaseUrl!;
-
-      // Fetch students count
-      int studentCount = 0;
-      try {
-        final res = await http.get(
-          Uri.parse('$baseUrl/rest/v1/students?select=id&isActive=eq.true'),
-          headers: headers,
-        ).timeout(const Duration(seconds: 10));
-        if (res.statusCode == 200) {
-          final data = jsonDecode(res.body) as List;
-          studentCount = data.length;
-        }
-      } catch (_) {}
-
-      // Fetch teachers count
-      int teacherCount = 0;
-      try {
-        final res = await http.get(
-          Uri.parse('$baseUrl/rest/v1/teachers?select=id&isActive=eq.true'),
-          headers: headers,
-        ).timeout(const Duration(seconds: 10));
-        if (res.statusCode == 200) {
-          final data = jsonDecode(res.body) as List;
-          teacherCount = data.length;
-        }
-      } catch (_) {}
-
-      // Fetch fee due
-      double feeDue = 0.0;
-      try {
-        final res = await http.get(
-          Uri.parse('$baseUrl/rest/v1/fee_payments?select=amountPaid'),
-          headers: headers,
-        ).timeout(const Duration(seconds: 10));
-        if (res.statusCode == 200) {
-          final data = jsonDecode(res.body) as List;
-          for (final row in data) {
-            feeDue += (row['amountPaid'] as num?)?.toDouble() ?? 0.0;
-          }
-        }
-      } catch (_) {}
-
-      // Fetch recent notices
-      List<dynamic> recentNotices = [];
-      try {
-        final res = await http.get(
-          Uri.parse('$baseUrl/rest/v1/notices?select=*&order=createdAt.desc&limit=5'),
-          headers: headers,
-        ).timeout(const Duration(seconds: 10));
-        if (res.statusCode == 200) {
-          recentNotices = jsonDecode(res.body) as List;
-        }
-      } catch (_) {}
-
-      if (!mounted) return;
-      setState(() {
-        _studentCount = studentCount;
-        _teacherCount = teacherCount;
-        _classesTodayCount = 0;
-        _teacherHoursToday = 0.0;
-        _studentPresentCount = 0;
-        _studentAbsentCount = 0;
-        _studentLateCount = 0;
-        _studentLeaveCount = 0;
-        _teachersRecordedCount = 0;
-        _centerFeeDue = feeDue;
-        _centerSalaryDue = 0.0;
-        _todayClassesList = [];
-        _recentTestsList = [];
-        _recentNoticesList = recentNotices;
-        _isLoading = false;
-        _errorMessage = null;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Failed to load data: $e';
-      });
-    }
-  }
-
   Future<void> _loadDashboardData({bool silent = false}) async {
     if (!mounted) return;
     if (!silent) {
@@ -189,9 +82,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
     }
 
-    // Web: fetch data from Supabase REST API
-    if (kIsWeb) {
-      await _loadDashboardDataFromSupabase();
+    // Use the platform-appropriate data source (SQLite native, Supabase web)
+    final dataSource = DataSourceFactory.create();
+    if (dataSource.isRemote) {
+      final data = await dataSource.loadDashboardData();
+      if (mounted) {
+        setState(() {
+          _studentCount = data.activeStudentCount;
+          _teacherCount = data.activeTeacherCount;
+          _classesTodayCount = data.classesTodayCount;
+          _teacherHoursToday = data.teacherHoursToday;
+          _studentPresentCount = data.studentPresentCount;
+          _studentAbsentCount = data.studentAbsentCount;
+          _studentLateCount = data.studentLateCount;
+          _studentLeaveCount = data.studentLeaveCount;
+          _teachersRecordedCount = data.teachersRecordedCount;
+          _centerFeeDue = data.centerFeeDue;
+          _centerSalaryDue = data.centerSalaryDue;
+          _todayClassesList = data.todayClasses;
+          _recentTestsList = data.recentTests;
+          _recentNoticesList = data.recentNotices;
+          _isLoading = false;
+        });
+      }
       return;
     }
 
@@ -338,7 +251,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const DashboardHeader(),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? SkeletonWidgets.pageSkeleton(cardCount: 4)
                   : _errorMessage != null
                       ? Center(
                           child: Padding(
@@ -787,6 +700,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       icon: Icons.settings,
                                       color: Colors.blueAccent,
                                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InstituteSettingsScreen())).then((_) => _loadDashboardData(silent: true)),
+                                    ),
+                                    MenuCard(
+                                      title: "Audit Log",
+                                      icon: Icons.history,
+                                      color: Colors.teal,
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AuditLogScreen())).then((_) => _loadDashboardData(silent: true)),
+                                    ),
+                                    MenuCard(
+                                      title: "License",
+                                      icon: Icons.vpn_key,
+                                      color: Colors.amber,
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LicenseScreen())).then((_) => _loadDashboardData(silent: true)),
+                                    ),
+                                    MenuCard(
+                                      title: "Branches",
+                                      icon: Icons.location_city,
+                                      color: Colors.teal,
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BranchManagementScreen())).then((_) => _loadDashboardData(silent: true)),
+                                    ),
+                                    MenuCard(
+                                      title: "Batches",
+                                      icon: Icons.groups,
+                                      color: Colors.cyan,
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BatchManagementScreen())).then((_) => _loadDashboardData(silent: true)),
+                                    ),
+                                    MenuCard(
+                                      title: "Academic Calendar",
+                                      icon: Icons.calendar_month,
+                                      color: Colors.brown,
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AcademicCalendarScreen())).then((_) => _loadDashboardData(silent: true)),
+                                    ),
+                                    MenuCard(
+                                      title: "Analytics",
+                                      icon: Icons.analytics,
+                                      color: Colors.deepPurple,
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnalyticsDashboardScreen())).then((_) => _loadDashboardData(silent: true)),
+                                    ),
+                                    MenuCard(
+                                      title: "Library",
+                                      icon: Icons.menu_book,
+                                      color: Colors.brown,
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LibraryScreen())).then((_) => _loadDashboardData(silent: true)),
+                                    ),
+                                    MenuCard(
+                                      title: "Transport",
+                                      icon: Icons.directions_bus,
+                                      color: Colors.green,
+                                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TransportManagementScreen())).then((_) => _loadDashboardData(silent: true)),
                                     ),
                                   ],
                                 ),

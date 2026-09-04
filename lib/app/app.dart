@@ -1,11 +1,16 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../features/authentication/login/login_screen.dart';
 import '../features/authentication/repository/auth_repository.dart';
+import '../features/onboarding/screens/onboarding_wizard_screen.dart';
 import '../shared/config/backend_config.dart';
 import '../shared/services/sync_engine.dart';
+import '../l10n/app_translations.dart';
+import '../shared/services/localization_service.dart';
+import '../shared/services/theme_service.dart';
 import '../shared/themes/app_theme.dart';
 import '../shared/utils/app_session.dart';
 
@@ -14,12 +19,31 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorKey: navigatorKey,
-      debugShowCheckedModeBanner: false,
-      title: 'Omega Education Centre',
-      theme: AppTheme.lightTheme,
-      home: const AppStartupWrapper(),
+    return AnimatedBuilder(
+      animation: ThemeService.instance,
+      builder: (context, _) {
+        return AnimatedBuilder(
+          animation: LocalizationService.instance,
+          builder: (context, _) {
+            return MaterialApp(
+              navigatorKey: navigatorKey,
+              debugShowCheckedModeBanner: false,
+              title: 'Omega Education Centre',
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: ThemeService.instance.themeMode,
+              locale: LocalizationService.instance.locale,
+              supportedLocales: const [Locale('en'), Locale('hi')],
+              localizationsDelegates: const [
+                AppTranslationsDelegate(),
+                DefaultMaterialLocalizations.delegate,
+                DefaultWidgetsLocalizations.delegate,
+              ],
+              home: const AppStartupWrapper(),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -155,11 +179,28 @@ class _AppStartupWrapperState extends State<AppStartupWrapper> with WidgetsBindi
 
   Future<Widget> _restoreSession() async {
     try {
-      await BackendConfig.loadSettingsFromDb();
+      // Check if onboarding is complete (first-run wizard)
+      final onboardingComplete = await OnboardingWizardScreen.isOnboardingComplete();
+      if (!onboardingComplete) {
+        return const OnboardingWizardScreen();
+      }
+
+      // Skip SQLite settings on web — SQLite is not available in browsers
+      if (!kIsWeb) {
+        try {
+          await BackendConfig.loadSettingsFromDb();
+        } catch (_) {}
+      }
+
       final authRepository = AuthRepository();
       final targetScreen = await authRepository.restorePersistedSession();
-      // Trigger non-blocking background sync on app launch
-      SyncEngine.instance.syncAll();
+
+      // Trigger non-blocking background sync on app launch (skip on web)
+      if (!kIsWeb) {
+        try {
+          SyncEngine.instance.syncAll();
+        } catch (_) {}
+      }
 
       if (targetScreen != null) {
         return targetScreen;

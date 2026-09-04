@@ -1,6 +1,8 @@
 import 'package:intl/intl.dart';
 
 import '../../../core/database/database_helper.dart';
+import '../../../shared/services/audit_service.dart';
+import '../../../shared/services/sync_engine.dart';
 import '../../../shared/utils/attendance_date_validator.dart';
 import '../models/teacher_payment_model.dart';
 import '../models/teacher_salary_summary_model.dart';
@@ -220,7 +222,29 @@ class TeacherSalaryRepository {
     map['createdAt'] = now;
     map['updatedAt'] = now;
 
-    return await db.insert('teacher_payments', map);
+    final paymentId = await db.insert('teacher_payments', map);
+
+    // Audit log
+    await AuditService.instance.logAction(
+      action: AuditService.actionSalaryPayment,
+      entityType: 'teacher_payments',
+      entityId: paymentId.toString(),
+      newValue: {
+        'teacherId': payment.teacherId,
+        'amount': payment.amount,
+        'month': payment.month,
+        'paymentMethod': payment.paymentMethod,
+      },
+    );
+
+    // Sync to cloud
+    SyncEngine.instance.registerTeacherPaymentChange(
+      paymentId: paymentId,
+      operation: 'CREATE',
+      payload: map,
+    );
+
+    return paymentId;
   }
 
   Future<double> getCenterWideSalaryDue({required String yearMonth}) async {

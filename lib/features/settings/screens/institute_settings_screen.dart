@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../authentication/repository/auth_repository.dart';
+import '../../../shared/services/biometric_service.dart';
+import '../../../shared/services/localization_service.dart';
+import '../../../shared/services/theme_service.dart';
 import '../../../shared/utils/app_session.dart';
 import '../models/institute_profile_model.dart';
 import '../models/master_data_model.dart';
@@ -37,7 +40,7 @@ class _InstituteSettingsScreenState extends State<InstituteSettingsScreen> with 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _loadSettings();
   }
 
@@ -264,6 +267,7 @@ class _InstituteSettingsScreenState extends State<InstituteSettingsScreen> with 
             Tab(icon: Icon(Icons.category), text: 'Master Data'),
             Tab(icon: Icon(Icons.manage_accounts), text: 'Users'),
             Tab(icon: Icon(Icons.shield), text: 'Security'),
+            Tab(icon: Icon(Icons.palette), text: 'Display'),
           ],
         ),
       ),
@@ -277,6 +281,7 @@ class _InstituteSettingsScreenState extends State<InstituteSettingsScreen> with 
                 _buildMasterDataTab(),
                 _buildUserAccountsTab(),
                 _buildSecurityTab(),
+                _buildDisplayTab(),
               ],
             ),
     );
@@ -679,6 +684,269 @@ class _InstituteSettingsScreenState extends State<InstituteSettingsScreen> with 
     );
   }
 
+  // ── Display Tab ──────────────────────────────────────────────────
+
+  Widget _buildDisplayTab() {
+    final currentMode = ThemeService.instance.themeMode;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'DISPLAY SETTINGS',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Appearance & Theme',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+
+          // Theme Mode Card
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.palette, color: Colors.indigo),
+                      SizedBox(width: 8),
+                      Text(
+                        'Theme Mode',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Choose how the app looks. "System" follows your device setting.',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Theme options
+                  _buildThemeOption(
+                    icon: Icons.brightness_auto,
+                    title: 'System Default',
+                    subtitle: 'Follow your device setting',
+                    isSelected: currentMode == ThemeMode.system,
+                    onTap: () => _setTheme(ThemeMode.system),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildThemeOption(
+                    icon: Icons.light_mode,
+                    title: 'Light Mode',
+                    subtitle: 'Bright background, dark text',
+                    isSelected: currentMode == ThemeMode.light,
+                    onTap: () => _setTheme(ThemeMode.light),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildThemeOption(
+                    icon: Icons.dark_mode,
+                    title: 'Dark Mode',
+                    subtitle: 'Dark background, light text — easier on the eyes',
+                    isSelected: currentMode == ThemeMode.dark,
+                    onTap: () => _setTheme(ThemeMode.dark),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Language Card
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.language, color: Colors.indigo),
+                      SizedBox(width: 8),
+                      Text(
+                        'Language',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Choose the app language. Some text may not be translated yet.',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Language options
+                  _buildLanguageOption(
+                    icon: Icons.abc,
+                    title: 'English',
+                    subtitle: 'English (default)',
+                    isSelected: !LocalizationService.instance.isHindi,
+                    onTap: () => _setLanguage(const Locale('en')),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildLanguageOption(
+                    icon: Icons.translate,
+                    title: 'हिन्दी',
+                    subtitle: 'Hindi (Devanagari script)',
+                    isSelected: LocalizationService.instance.isHindi,
+                    onTap: () => _setLanguage(const Locale('hi')),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLanguageOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? Colors.indigo : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+          color: isSelected ? Colors.indigo.withAlpha(20) : null,
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: isSelected ? Colors.indigo : Colors.grey, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected ? Colors.indigo.shade900 : Colors.black87,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle, color: Colors.indigo, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _setLanguage(Locale locale) async {
+    await LocalizationService.instance.setLocale(locale);
+    if (mounted) {
+      setState(() {});
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(locale.languageCode == 'hi' ? 'भाषा हिन्दी में बदली गई' : 'Language changed to English'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  Widget _buildThemeOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? Colors.indigo : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+          color: isSelected ? Colors.indigo.withAlpha(20) : null,
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: isSelected ? Colors.indigo : Colors.grey, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected ? Colors.indigo.shade900 : Colors.black87,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle, color: Colors.indigo, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _setTheme(ThemeMode mode) async {
+    await ThemeService.instance.setThemeMode(mode);
+    if (mounted) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            mode == ThemeMode.system
+                ? 'Theme set to System Default'
+                : mode == ThemeMode.dark
+                    ? 'Dark Mode enabled'
+                    : 'Light Mode enabled',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
   // ── Security Tab ──────────────────────────────────────────────────
 
   Widget _buildSecurityTab() {
@@ -751,6 +1019,11 @@ class _InstituteSettingsScreenState extends State<InstituteSettingsScreen> with 
                     ],
                   ),                  ),
               ),
+
+              const SizedBox(height: 16),
+
+              // Biometric Authentication Card
+              _buildBiometricCard(),
 
               const SizedBox(height: 16),
 
@@ -833,6 +1106,89 @@ class _InstituteSettingsScreenState extends State<InstituteSettingsScreen> with 
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBiometricCard() {
+    return FutureBuilder<bool>(
+      future: BiometricService.instance.canAuthenticate(),
+      builder: (context, snapshot) {
+        final canUse = snapshot.data ?? false;
+        final biometric = BiometricService.instance;
+
+        return Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.fingerprint, color: Colors.indigo),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Biometric Login',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const Spacer(),
+                    if (canUse)
+                      Switch(
+                        value: biometric.isEnabled,
+                        activeThumbColor: Colors.green,
+                        onChanged: (val) async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          if (val) {
+                            // Enable: require biometric verification first
+                            final didAuth = await biometric.authenticate(
+                              reason: 'Verify to enable biometric login',
+                            );
+                            if (didAuth && mounted) {
+                              await biometric.enableBiometric(
+                                AppSession.instance.currentUsername,
+                              );
+                              setState(() {});
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('Biometric login enabled'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } else {
+                            await biometric.disableBiometric();
+                            setState(() {});
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Biometric login disabled'),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                          }
+                        },
+                      )
+                    else
+                      Text(
+                        'Not available',
+                        style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  canUse
+                      ? 'Use fingerprint or face to login quickly. '
+                          'Requires a password login first to enroll.'
+                      : 'Biometric authentication is not available on this device. '
+                          'Requires fingerprint or face enrollment in device settings.',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

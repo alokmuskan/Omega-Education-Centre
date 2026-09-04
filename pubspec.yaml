@@ -54,9 +54,26 @@ dependencies:
   file_picker: 10.0.0
   http: ^1.2.0
   supabase_flutter: ^2.9.0
+  
+  # Push Notifications
+  firebase_core: ^3.8.1
+  firebase_messaging: ^15.1.6
+  
+  # UI Loading States
+  shimmer: ^3.0.0
+  
+  # Biometric Authentication
+  local_auth: ^2.3.0
+
+  # State Management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+
+  integration_test:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to

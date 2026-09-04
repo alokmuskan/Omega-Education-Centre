@@ -3,8 +3,8 @@ import 'package:intl/intl.dart';
 
 import '../../core/database/database_helper.dart';
 import '../../shared/utils/app_session.dart';
+import '../../shared/utils/logout_util.dart';
 import '../attendance/screens/teacher_attendance_history_screen.dart';
-import '../authentication/login/login_screen.dart';
 import '../class_register/screens/daily_class_register_main_screen.dart';
 import '../notices/repository/notice_repository.dart';
 import '../notices/screens/notice_management_screen.dart';
@@ -13,6 +13,8 @@ import '../salary/screens/teacher_payment_history_screen.dart';
 import '../teachers/screens/teacher_details_screen.dart';
 import 'widgets/menu_card.dart';
 import 'widgets/summary_card.dart';
+import '../homework/screens/homework_list_screen.dart';
+import '../../shared/widgets/skeleton_widgets.dart';
 
 /// Role-Based Dashboard for authenticated Teachers.
 class TeacherDashboardScreen extends StatefulWidget {
@@ -156,37 +158,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   }
 
   Future<void> _logout(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Logout Confirmation'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('CANCEL'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('LOGOUT'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      AppSession.instance.clearSession();
-      if (!context.mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
-    }
+    await LogoutUtil.logout(context);
   }
 
   @override
@@ -225,7 +197,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
       ),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? SkeletonWidgets.pageSkeleton(cardCount: 3, hasHeader: false)
             : _errorMessage != null
                 ? Center(
                     child: Padding(
@@ -540,6 +512,17 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => const NoticeManagementScreen(),
+                                  ),
+                                ).then((_) => _loadTeacherDashboardData()),
+                              ),
+                              MenuCard(
+                                title: "Homework",
+                                icon: Icons.assignment,
+                                color: Colors.brown,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const HomeworkListScreen(),
                                   ),
                                 ).then((_) => _loadTeacherDashboardData()),
                               ),

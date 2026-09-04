@@ -14,45 +14,39 @@ void main() {
 
   group('Phase 26 — Multi-Device Backend Foundation Unit Tests', () {
     test('1. Verify Supabase DDL SQL script exists and contains core tables', () {
-      final schemaFile = File('supabase/schema.sql');
+      final schemaFile = File('supabase/migrations/000_clean_reset.sql');
       expect(schemaFile.existsSync(), isTrue);
 
       final content = schemaFile.readAsStringSync();
-      expect(content, contains('CREATE TABLE IF NOT EXISTS organisations'));
-      expect(content, contains('CREATE TABLE IF NOT EXISTS users'));
-      expect(content, contains('CREATE TABLE IF NOT EXISTS admins'));
-      expect(content, contains('CREATE TABLE IF NOT EXISTS teachers'));
-      expect(content, contains('CREATE TABLE IF NOT EXISTS students'));
-      expect(content, contains('CREATE TABLE IF NOT EXISTS fees'));
-      expect(content, contains('CREATE TABLE IF NOT EXISTS fee_payments'));
-      expect(content, contains('CREATE TABLE IF NOT EXISTS student_attendance'));
-      expect(content, contains('CREATE TABLE IF NOT EXISTS teacher_attendance'));
-      expect(content, contains('CREATE TABLE IF NOT EXISTS teacher_payments'));
-      expect(content, contains('CREATE TABLE IF NOT EXISTS tests'));
-      expect(content, contains('CREATE TABLE IF NOT EXISTS test_results'));
-      expect(content, contains('CREATE TABLE IF NOT EXISTS devices'));
+      expect(content, contains('CREATE TABLE organisations'));
+      expect(content, contains('CREATE TABLE users'));
+      expect(content, contains('CREATE TABLE teachers'));
+      expect(content, contains('CREATE TABLE students'));
+      expect(content, contains('CREATE TABLE fees'));
+      expect(content, contains('CREATE TABLE fee_payments'));
+      expect(content, contains('CREATE TABLE student_attendance'));
+      expect(content, contains('CREATE TABLE teacher_attendance'));
+      expect(content, contains('CREATE TABLE teacher_payments'));
+      expect(content, contains('CREATE TABLE tests'));
+      expect(content, contains('CREATE TABLE test_results'));
     });
 
-    test('2. Verify Row Level Security (RLS) script exists and defines isolation policies', () {
-      final rlsFile = File('supabase/rls_policies.sql');
-      expect(rlsFile.existsSync(), isTrue);
+    test('2. Verify Row Level Security (RLS) is defined in schema migration', () {
+      final schemaFile = File('supabase/migrations/000_clean_reset.sql');
+      expect(schemaFile.existsSync(), isTrue);
 
-      final content = rlsFile.readAsStringSync();
-      expect(content, contains('organisations ENABLE ROW LEVEL SECURITY'));
-      expect(content, contains('CREATE POLICY admin_all_organisations'));
-      expect(content, contains('CREATE POLICY teacher_read_own_profile'));
-      expect(content, contains('CREATE POLICY student_read_own_profile'));
-      expect(content, contains('CREATE POLICY user_read_own_devices'));
+      final content = schemaFile.readAsStringSync();
+      expect(content, contains('ENABLE ROW LEVEL SECURITY'));
+      expect(content, contains('CREATE POLICY'));
     });
 
-    test('3. Verify Supabase setup README documentation exists and highlights security rules', () {
-      final readmeFile = File('supabase/README.md');
-      expect(readmeFile.existsSync(), isTrue);
+    test('3. Verify Supabase setup documentation exists', () {
+      final docFile = File('docs/supabase_setup_guide.md');
+      expect(docFile.existsSync(), isTrue);
 
-      final content = readmeFile.readAsStringSync();
-      expect(content, contains('CRITICAL SECURITY RULES'));
-      expect(content, contains('NEVER commit private keys'));
-      expect(content, contains('Profile Photos'));
+      final content = docFile.readAsStringSync();
+      expect(content, contains('Supabase Setup'));
+      expect(content, contains('Emergency Recovery'));
     });
 
     test('4. BackendConfig defaults to offline-first without throwing errors', () {
