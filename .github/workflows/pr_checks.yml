@@ -20,6 +20,12 @@ jobs:
         with:
           channel: stable
 
+      - name: Create .env placeholder
+        run: |
+          if [ ! -f .env ]; then
+            echo "# CI placeholder" > .env
+          fi
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -35,6 +41,12 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+
+      - name: Create .env placeholder
+        run: |
+          if [ ! -f .env ]; then
+            echo "# CI placeholder" > .env
+          fi
 
       - name: Install dependencies
         run: flutter pub get
