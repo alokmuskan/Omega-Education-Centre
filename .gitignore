@@ -72,3 +72,4 @@ supabase/.branches/
 # Environment / Secrets
 .env
 .env.local
+supabase/migrations/003_emergency_recovery.sql
