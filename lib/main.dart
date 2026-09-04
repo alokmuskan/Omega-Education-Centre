@@ -14,11 +14,15 @@ import 'shared/services/license_service.dart';
 import 'shared/services/localization_service.dart';
 import 'shared/services/theme_service.dart';
 import 'shared/services/crash_reporting_service.dart';
+import 'shared/services/logging_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ── Step 0: Initialize Crash Reporting (FIRST — catches all errors) ─
+  // ── Step 0a: Initialize Logging (FIRST — for all other services) ──
+  LoggingService.instance.init();
+
+  // ── Step 0b: Initialize Crash Reporting (catches all errors) ─────
   await CrashReportingService.instance.init();
 
   // ── Step 1: Initialize Firebase (with graceful fallback) ────────────

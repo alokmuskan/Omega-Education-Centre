@@ -3,10 +3,10 @@ import 'package:intl/intl.dart';
 
 import '../../core/database/database_helper.dart';
 import '../../shared/utils/app_session.dart';
+import '../../shared/utils/logout_util.dart';
 import '../../shared/widgets/profile_photo_widget.dart';
 import '../attendance/repository/student_attendance_repository.dart';
 import '../attendance/screens/student_attendance_history_screen.dart';
-import '../authentication/login/login_screen.dart';
 import '../fees/repository/fee_repository.dart';
 import '../fees/screens/student_fee_details_screen.dart';
 import '../notices/repository/notice_repository.dart';
@@ -163,37 +163,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 
   Future<void> _logout(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Logout Confirmation'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('CANCEL'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('LOGOUT'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      AppSession.instance.clearSession();
-      if (!context.mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
-    }
+    await LogoutUtil.logout(context);
   }
 
   @override

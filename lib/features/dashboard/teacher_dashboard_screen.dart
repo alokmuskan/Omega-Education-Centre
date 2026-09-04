@@ -3,8 +3,8 @@ import 'package:intl/intl.dart';
 
 import '../../core/database/database_helper.dart';
 import '../../shared/utils/app_session.dart';
+import '../../shared/utils/logout_util.dart';
 import '../attendance/screens/teacher_attendance_history_screen.dart';
-import '../authentication/login/login_screen.dart';
 import '../class_register/screens/daily_class_register_main_screen.dart';
 import '../notices/repository/notice_repository.dart';
 import '../notices/screens/notice_management_screen.dart';
@@ -158,37 +158,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   }
 
   Future<void> _logout(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Logout Confirmation'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('CANCEL'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('LOGOUT'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      AppSession.instance.clearSession();
-      if (!context.mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
-    }
+    await LogoutUtil.logout(context);
   }
 
   @override

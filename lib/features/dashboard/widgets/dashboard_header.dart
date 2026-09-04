@@ -3,44 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../shared/screens/notification_center_screen.dart';
 import '../../../shared/services/notification_service.dart';
 import '../../../shared/utils/app_session.dart';
+import '../../../shared/utils/logout_util.dart';
 import '../../../shared/widgets/sync_status_widget.dart';
-import '../../authentication/login/login_screen.dart';
 
 class DashboardHeader extends StatelessWidget {
   const DashboardHeader({super.key});
 
   Future<void> _logout(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Logout Confirmation'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('CANCEL'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('LOGOUT'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      AppSession.instance.clearSession();
-      if (!context.mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
-    }
+    await LogoutUtil.logout(context);
   }
 
   @override
