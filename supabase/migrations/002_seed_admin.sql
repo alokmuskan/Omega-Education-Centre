@@ -16,7 +16,7 @@ SELECT signup(
 
 -- Create the admin_accounts profile record
 INSERT INTO admin_accounts (username, displayName, passwordHash)
-VALUES ('Alok', 'Alok', 'Alok@2006')
+VALUES ('alokraj1319@gmail.com', 'Alok', 'Alok@2006')
 ON CONFLICT (username) DO NOTHING;
 
 -- Also create a backup 'admin' user (for backward compatibility)
