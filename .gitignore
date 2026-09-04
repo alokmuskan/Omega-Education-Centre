@@ -71,4 +71,3 @@ supabase/.branches/
 # Environment / Secrets
 .env
 .env.local
-backend_config.dart
