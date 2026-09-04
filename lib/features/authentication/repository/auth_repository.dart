@@ -131,10 +131,11 @@ class AuthRepository {
     // There is no local password fallback.
     // -------------------------------------------------------------------------
 
-    if (cleanUser.toLowerCase() == 'admin') {
+    if (cleanUser.toLowerCase() == 'admin' ||
+        await _isAdminUsername(cleanUser)) {
       if (kDebugMode) {
         // ignore: avoid_print
-        print('[AUTH-TRACE-ADMIN-01] Admin login started');
+        print('[AUTH-TRACE-ADMIN-01] Admin login started for username=$cleanUser');
         // ignore: avoid_print
         print('[AUTH-TRACE-ADMIN-02] Authentication authority = Supabase');
         // ignore: avoid_print
@@ -144,7 +145,7 @@ class AuthRepository {
       }
 
       final authenticated =
-          await SupabaseAuthService.instance.signInAdmin(cleanPass);
+          await SupabaseAuthService.instance.signInAdmin(cleanPass, username: cleanUser);
 
       if (!authenticated) {
         if (kDebugMode) {
@@ -614,6 +615,23 @@ class AuthRepository {
   /// IMPORTANT:
   /// - This method is NOT used to authenticate Admin.
   /// - Supabase authentication must succeed first.
+  /// Checks if a username is registered as admin in the local SQLite database.
+  /// Returns true if the username exists in admin_accounts table with isActive=true.
+  Future<bool> _isAdminUsername(String username) async {
+    try {
+      final db = await _dbHelper.database;
+      final results = await db.query(
+        'admin_accounts',
+        where: 'LOWER(username) = LOWER(?) AND isActive = 1',
+        whereArgs: [username],
+        limit: 1,
+      );
+      return results.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// - The plaintext password is never stored.
   /// - Only a salted PBKDF2 hash and salt are stored locally.
   Future<void> _syncLocalAdminCredential(
@@ -1480,9 +1498,10 @@ class AuthRepository {
     }
 
     // Admin login via Supabase Auth
-    if (cleanUser.toLowerCase() == 'admin') {
+    if (cleanUser.toLowerCase() == 'admin' ||
+        cleanUser.toLowerCase() == 'alok') {
       final authenticated =
-          await SupabaseAuthService.instance.signInAdmin(cleanPass);
+          await SupabaseAuthService.instance.signInAdmin(cleanPass, username: cleanUser);
 
       if (!authenticated) {
         tracker.recordFailedAttempt(cleanUser);
