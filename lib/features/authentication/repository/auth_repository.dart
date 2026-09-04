@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/data_sources/data_source_factory.dart';
 import '../../../core/database/database_helper.dart';
 import '../../../shared/constants/app_constants.dart';
 import '../../../shared/services/audit_service.dart';
@@ -189,7 +190,7 @@ class AuthRepository {
       // The plaintext password is never stored.
       // -----------------------------------------------------------------------
 
-      if (!kIsWeb) {
+      if (DataSourceFactory.create().isLocal) {
         try {
           await _syncLocalAdminCredential(cleanPass);
 
@@ -246,7 +247,7 @@ class AuthRepository {
     // On web: authenticate via Supabase Auth (auto-provisions if needed)
     // -------------------------------------------------------------------------
 
-    if (kIsWeb) {
+    if (DataSourceFactory.create().isRemote) {
       return _webAuthenticate(cleanUser, cleanPass);
     }
 
@@ -1285,7 +1286,7 @@ class AuthRepository {
       // Web session restoration via Supabase Auth token validation
       // -----------------------------------------------------------------------
 
-      if (kIsWeb) {
+      if (DataSourceFactory.create().isRemote) {
         final token =
             await SupabaseAuthService.instance.getValidAccessToken();
 

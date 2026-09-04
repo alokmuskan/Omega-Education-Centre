@@ -62,16 +62,17 @@ class _CsvImportScreenState extends State<CsvImportScreen> {
               child: ListTile(
                 leading: const Icon(Icons.download, color: Colors.blue),
                 title: const Text('Download CSV Template'),
-                subtitle: Text('Get a blank ${_selectedEntity} CSV template with headers'),
+                subtitle: Text('Get a blank $_selectedEntity CSV template with headers'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () async {
+                  final messenger = ScaffoldMessenger.of(context);
                   if (_selectedEntity == 'student') {
                     await CsvExportService.instance.generateStudentTemplate();
                   } else {
                     await CsvExportService.instance.generateTeacherTemplate();
                   }
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       const SnackBar(content: Text('Template downloaded!')),
                     );
                   }

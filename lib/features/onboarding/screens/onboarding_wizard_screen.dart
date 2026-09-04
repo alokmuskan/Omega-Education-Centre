@@ -60,12 +60,12 @@ class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
   final _adminPasswordController = TextEditingController();
   final _adminConfirmPasswordController = TextEditingController();
   bool _adminPasswordVisible = false;
-  bool _isCreatingAccount = false;
+  final bool _isCreatingAccount = false;
 
   // Step 5: Supabase
   final _supabaseUrlController = TextEditingController();
   final _supabaseKeyController = TextEditingController();
-  bool _supabaseConnecting = false;
+  final bool _supabaseConnecting = false;
 
   @override
   void dispose() {

@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
@@ -42,7 +41,7 @@ class SupabaseDataSource extends DataSource {
     if (_baseUrl.isEmpty || !BackendConfig.isBackendConfigured) return [];
     try {
       final hdrs = await _headers();
-      var url = '$baseUrl/rest/v1/$table';
+      var url = '$_baseUrl/rest/v1/$table';
       final params = <String>[];
       if (select != null) params.add('select=$select');
       if (filter != null) params.add(filter);
@@ -167,28 +166,79 @@ class SupabaseDataSource extends DataSource {
       }
     }
 
+    // Teachers Recorded Today
+    final teachersRecorded = await _restGet('teacher_attendance', select: 'teacherId', filter: 'date=eq.$todayStr');
+    final uniqueTeacherIds = teachersRecorded.map((r) => r['teacherId']).toSet();
+
     // Fee Due
     double feeDue = 0.0;
     final fees = await _restGet('fees', select: 'courseFee');
     for (final row in fees) {
       feeDue += (row['courseFee'] as num?)?.toDouble() ?? 0.0;
     }
-    final paid = await _restGet('fee_payments', select: 'amountPaid');
+    final paidRows = await _restGet('fee_payments', select: 'amountPaid');
     double totalPaid = 0.0;
-    for (final row in paid) {
+    for (final row in paidRows) {
       totalPaid += (row['amountPaid'] as num?)?.toDouble() ?? 0.0;
     }
     feeDue = (feeDue - totalPaid).clamp(0.0, double.infinity);
 
-    // Recent notices
+    // Salary Due
+    double salaryDue = 0.0;
+    try {
+      final currentMonth = DateFormat('yyyy-MM').format(DateTime.now());
+      final teachersList = await _restGet('teachers', select: 'id,payPerHour', filter: 'isActive=eq.true');
+      for (final t in teachersList) {
+        final tId = t['id'];
+        final payRate = (t['payPerHour'] as num?)?.toDouble() ?? 0.0;
+        final hoursRows = await _restGet('teacher_attendance', select: 'hoursWorked', filter: 'teacherId=eq.$tId&date=like.$currentMonth%');
+        double hours = 0.0;
+        for (final h in hoursRows) {
+          hours += (h['hoursWorked'] as num?)?.toDouble() ?? 0.0;
+        }
+        final paidRowsT = await _restGet('teacher_payments', select: 'amount', filter: 'teacherId=eq.$tId&year=eq.${DateTime.now().year}');
+        double paid = 0.0;
+        for (final p in paidRowsT) {
+          paid += (p['amount'] as num?)?.toDouble() ?? 0.0;
+        }
+        final due = (hours * payRate) - paid;
+        if (due > 0) salaryDue += due;
+      }
+    } catch (_) {}
+
+    // Today's Classes
+    List<Map<String, dynamic>> todayClasses = [];
+    try {
+      final classRows = await _restGet('daily_class_records', select: '*', filter: 'date=eq.$todayStr&order=startTime.asc&limit=3');
+      todayClasses = classRows.map((c) => {
+        'time': c['startTime'] as String? ?? '--:--',
+        'class': c['studentClass'] as String? ?? '',
+        'batch': c['batch'] as String? ?? '',
+        'teacher': 'Teacher',
+        'subject': c['subject'] as String? ?? '',
+        'topic': c['topic'] as String? ?? '',
+        'duration': '${c['durationMinutes']} mins',
+      }).toList();
+    } catch (_) {}
+
+    // Recent Tests & Notices
+    final recentTests = await _restGet('tests', select: '*', filter: 'order=createdAt.desc&limit=3');
     final notices = await _restGet('notices', select: '*', filter: 'order=createdAt.desc&limit=3');
 
     return DashboardData(
       activeStudentCount: students.length,
       activeTeacherCount: teachers.length,
-      totalFeesCollected: totalPaid,
-      pendingFees: feeDue,
-      todayAttendance: present,
+      classesTodayCount: classes.length,
+      teacherHoursToday: 0.0,
+      studentPresentCount: present,
+      studentAbsentCount: absent,
+      studentLateCount: lateCount,
+      studentLeaveCount: leave,
+      teachersRecordedCount: uniqueTeacherIds.length,
+      centerFeeDue: feeDue,
+      centerSalaryDue: salaryDue,
+      todayClasses: todayClasses,
+      recentTests: recentTests,
       recentNotices: notices,
     );
   }

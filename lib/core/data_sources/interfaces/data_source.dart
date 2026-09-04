@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// Abstract data source interface.
 ///
 /// All feature code should depend on this interface rather than checking

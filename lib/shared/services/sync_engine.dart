@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../../core/data_sources/data_source_factory.dart';
 import '../../core/database/database_helper.dart';
 import '../config/backend_config.dart';
 import 'supabase_auth_service.dart';
@@ -106,7 +107,7 @@ class SyncEngine {
   Future<void> syncAll() async {
     // Web/Chrome does not support the application's sqflite database layer.
     // Do not allow the synchronization engine to access SQLite on Web.
-    if (kIsWeb) {
+    if (DataSourceFactory.create().isRemote) {
       statusNotifier.value = SyncStatusState.offline;
       pendingCountNotifier.value = 0;
       return;
