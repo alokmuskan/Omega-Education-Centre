@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../features/authentication/login/login_screen.dart';
@@ -184,11 +185,22 @@ class _AppStartupWrapperState extends State<AppStartupWrapper> with WidgetsBindi
         return const OnboardingWizardScreen();
       }
 
-      await BackendConfig.loadSettingsFromDb();
+      // Skip SQLite settings on web — SQLite is not available in browsers
+      if (!kIsWeb) {
+        try {
+          await BackendConfig.loadSettingsFromDb();
+        } catch (_) {}
+      }
+
       final authRepository = AuthRepository();
       final targetScreen = await authRepository.restorePersistedSession();
-      // Trigger non-blocking background sync on app launch
-      SyncEngine.instance.syncAll();
+
+      // Trigger non-blocking background sync on app launch (skip on web)
+      if (!kIsWeb) {
+        try {
+          SyncEngine.instance.syncAll();
+        } catch (_) {}
+      }
 
       if (targetScreen != null) {
         return targetScreen;

@@ -17,6 +17,15 @@ import 'shared/services/crash_reporting_service.dart';
 import 'shared/services/logging_service.dart';
 
 void main() async {
+  // Catch all errors so the app shows something instead of a white screen
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    if (kDebugMode) {
+      print('[FLUTTER ERROR] ${details.exception}');
+      print('[FLUTTER ERROR] ${details.stack}');
+    }
+  };
+
   WidgetsFlutterBinding.ensureInitialized();
 
   // ── Step 0a: Initialize Logging (FIRST — for all other services) ──
@@ -46,14 +55,17 @@ void main() async {
   //
   // This MUST be called before runApp() and outside of any widget context.
   // It enables the app to receive notifications when in background/terminated.
-  try {
-    registerFirebaseBackgroundHandler();
-    if (kDebugMode) {
-      print('[MAIN] FCM background handler registered');
-    }
-  } catch (e) {
-    if (kDebugMode) {
-      print('[MAIN] FCM background handler registration failed: $e');
+  // Skip on web — FCM background handler is not supported in browsers.
+  if (!kIsWeb) {
+    try {
+      registerFirebaseBackgroundHandler();
+      if (kDebugMode) {
+        print('[MAIN] FCM background handler registered');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('[MAIN] FCM background handler registration failed: $e');
+      }
     }
   }
 
@@ -76,7 +88,16 @@ void main() async {
   //
   // SQLite settings take priority over .env values. This allows the admin
   // to change credentials from the Settings screen without re-deploying.
-  await BackendConfig.loadSettingsFromDb();
+  // Skip on web — SQLite is not available in browsers.
+  if (!kIsWeb) {
+    try {
+      await BackendConfig.loadSettingsFromDb();
+    } catch (e) {
+      if (kDebugMode) {
+        print('[MAIN] SQLite settings load skipped (web or unavailable): $e');
+      }
+    }
+  }
 
   // ── Step 6: Initialize Supabase SDK if configured ────────────────────
   if (BackendConfig.isBackendConfigured) {
@@ -93,28 +114,55 @@ void main() async {
   await LocalizationService.instance.init();
 
   // ── Step 7b: Initialize Biometric Service ────────────────────────────
-  await BiometricService.instance.init();
+  // Skip on web — local_auth plugin is not supported in browsers.
+  if (!kIsWeb) {
+    try {
+      await BiometricService.instance.init();
+    } catch (e) {
+      if (kDebugMode) {
+        print('[MAIN] Biometric service skipped (web or unavailable): $e');
+      }
+    }
+  }
 
   // ── Step 7c: Initialize License Service ──────────────────────────────
-  await LicenseService.instance.init();
+  try {
+    await LicenseService.instance.init();
+  } catch (e) {
+    if (kDebugMode) {
+      print('[MAIN] License service init failed: $e');
+    }
+  }
 
   // ── Step 8: Initialize Push Notifications ────────────────────────────
   //
   // After Firebase and Supabase are initialized, set up FCM.
+  // Skip on web — FCM is not supported in browsers.
   // This is non-blocking — if it fails, in-app notifications still work.
-  try {
-    await PushNotificationService.instance.initialize();
-    if (kDebugMode) {
-      print('[MAIN] Push notification service initialized');
-    }
-  } catch (e) {
-    if (kDebugMode) {
-      print('[MAIN] Push notification initialization failed: $e');
+  if (!kIsWeb) {
+    try {
+      await PushNotificationService.instance.initialize();
+      if (kDebugMode) {
+        print('[MAIN] Push notification service initialized');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('[MAIN] Push notification initialization failed: $e');
+      }
     }
   }
 
   // ── Step 9: Run automatic daily backup asynchronously on startup ──────
-  BackupService().runAutomaticDailyBackup();
+  // Skip on web — backup uses SQLite which is not available in browsers.
+  if (!kIsWeb) {
+    try {
+      BackupService().runAutomaticDailyBackup();
+    } catch (e) {
+      if (kDebugMode) {
+        print('[MAIN] Backup service skipped (web or unavailable): $e');
+      }
+    }
+  }
 
   runApp(
     const ProviderScope(
